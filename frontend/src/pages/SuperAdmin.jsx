@@ -61,6 +61,9 @@ export default function SuperAdmin({ onLogout }) {
     setName(company.name);
     setCnpj(company.cnpj || '');
     setPlanName(company.plan_name || 'Básico');
+    setAdminName(company.admin_name || '');
+    setAdminUsername(company.admin_username || '');
+    setAdminPassword('');
     
     let dateStr = '';
     if (company.plan_expires_at) {
@@ -86,6 +89,11 @@ export default function SuperAdmin({ onLogout }) {
       return;
     }
 
+    if (editingCompany && (!adminName || !adminUsername)) {
+      setFormError('Por favor, preencha o nome e o usuário do administrador.');
+      return;
+    }
+
     if (!editingCompany && (!adminName || !adminUsername || !adminPassword)) {
       setFormError('Por favor, preencha todos os campos obrigatórios da conta do administrador.');
       return;
@@ -103,7 +111,10 @@ export default function SuperAdmin({ onLogout }) {
             cnpj,
             plan_name: planName,
             plan_expires_at: planExpiresAt,
-            plan_status: editingCompany.plan_status
+            plan_status: editingCompany.plan_status,
+            admin_name: adminName,
+            admin_username: adminUsername,
+            admin_password: adminPassword
           }
         : {
             name,
@@ -381,7 +392,7 @@ export default function SuperAdmin({ onLogout }) {
             )}
 
             <form onSubmit={handleSaveCompany} class="space-y-6">
-              <div class={editingCompany ? "grid grid-cols-1 gap-6" : "grid grid-cols-1 md:grid-cols-2 gap-6"}>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Dados da Empresa */}
                 <div class="space-y-4">
                   <h5 class="text-sm font-bold text-primary-400 border-b border-slate-700 pb-1 uppercase tracking-wider">Dados do Assinante</h5>
@@ -430,45 +441,45 @@ export default function SuperAdmin({ onLogout }) {
                   </div>
                 </div>
 
-                {/* Administrador Inicial (Apenas na criação) */}
-                {!editingCompany && (
-                  <div class="space-y-4">
-                    <h5 class="text-sm font-bold text-primary-400 border-b border-slate-700 pb-1 uppercase tracking-wider">Conta do Admin da Empresa</h5>
-                    <div>
-                      <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome Completo do Admin *</label>
-                      <input
-                        type="text"
-                        required
-                        value={adminName}
-                        onChange={(e) => setAdminName(e.target.value)}
-                        placeholder="Ex: Marcelo Sgarbi Dias"
-                        class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome de Usuário *</label>
-                      <input
-                        type="text"
-                        required
-                        value={adminUsername}
-                        onChange={(e) => setAdminUsername(e.target.value)}
-                        placeholder="Ex: marcelo.admin"
-                        class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-slate-300 text-xs font-bold mb-1.5">Senha Provisória *</label>
-                      <input
-                        type="password"
-                        required
-                        value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
-                        placeholder="Mínimo 6 caracteres"
-                        class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
-                      />
-                    </div>
+                {/* Administrador Inicial ou Edição */}
+                <div class="space-y-4">
+                  <h5 class="text-sm font-bold text-primary-400 border-b border-slate-700 pb-1 uppercase tracking-wider">Conta do Admin da Empresa</h5>
+                  <div>
+                    <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome Completo do Admin *</label>
+                    <input
+                      type="text"
+                      required
+                      value={adminName}
+                      onChange={(e) => setAdminName(e.target.value)}
+                      placeholder="Ex: Marcelo Sgarbi Dias"
+                      class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                    />
                   </div>
-                )}
+                  <div>
+                    <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome de Usuário *</label>
+                    <input
+                      type="text"
+                      required
+                      value={adminUsername}
+                      onChange={(e) => setAdminUsername(e.target.value)}
+                      placeholder="Ex: marcelo.admin"
+                      class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-slate-300 text-xs font-bold mb-1.5">
+                      {editingCompany ? 'Nova Senha (Opcional)' : 'Senha Provisória *'}
+                    </label>
+                    <input
+                      type="password"
+                      required={!editingCompany}
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      placeholder={editingCompany ? "Deixe em branco para manter" : "Mínimo 6 caracteres"}
+                      class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div class="flex justify-end space-x-3 pt-6 border-t border-slate-700">

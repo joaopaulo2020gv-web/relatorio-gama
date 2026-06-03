@@ -1,0 +1,96 @@
+const bcrypt = require('bcryptjs');
+
+async function initPg(pool) {
+  const client = await pool.connect();
+  try {
+    console.log('Iniciando inicialização do schema no PostgreSQL...');
+
+    // 1. Tabela de Empresas
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS companies (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        cnpj TEXT,
+        logo_url TEXT,
+        bank_name TEXT,
+        bank_agency TEXT,
+        bank_account TEXT,
+        bank_owner TEXT,
+        bank_cpf_pix TEXT,
+        plan_name TEXT DEFAULT 'Básico',
+        plan_status TEXT DEFAULT 'active',
+        plan_expires_at TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Tabela "companies" verificada/criada.');
+
+    // 2. Tabela de Usuários
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL CHECK(role IN ('superadmin', 'admin', 'pilot')),
+        company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Tabela "users" verificada/criada.');
+
+    // 3. Tabela de Relatórios
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS reports (
+        id SERIAL PRIMARY KEY,
+        pilot_id INTEGER NOT NULL REFERENCES users(id),
+        company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        client_name TEXT NOT NULL,
+        farm_name TEXT NOT NULL,
+        culture TEXT NOT NULL,
+        report_date TEXT NOT NULL,
+        flights_data TEXT, 
+        weather_temp REAL,
+        weather_humidity REAL,
+        weather_desc TEXT,
+        delta_t REAL,
+        caldas_data TEXT, 
+        ph_photo_url TEXT,
+        ph_desc TEXT,
+        maps_data TEXT, 
+        observations TEXT,
+        total_area REAL DEFAULT 0,
+        price_per_ha REAL DEFAULT 0,
+        total_price REAL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Tabela "reports" verificada/criada.');
+
+    // 4. Inserir SuperAdmin padrão se não existir
+    const checkRes = await client.query("SELECT COUNT(*) as count FROM users WHERE role = 'superadmin'");
+    const count = parseInt(checkRes.rows[0].count, 10);
+    
+    if (count === 0) {
+      const salt = bcrypt.genSaltSync(10);
+      const hashedPassword = bcrypt.hashSync('gamaadmin123', salt);
+      await client.query(
+        "INSERT INTO users (username, password, role, name) VALUES ($1, $2, $3, $4)",
+        ['superadmin', hashedPassword, 'superadmin', 'Administrador Geral']
+      );
+      console.log('SuperAdmin inicial criado com sucesso!');
+      console.log('Usuário: superadmin | Senha: gamaadmin123');
+    } else {
+      console.log('SuperAdmin já cadastrado.');
+    }
+
+    console.log('Inicialização do banco concluída com sucesso!');
+  } catch (err) {
+    console.error('Erro ao inicializar banco PostgreSQL:', err.message);
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = initPg;

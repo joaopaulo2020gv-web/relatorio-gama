@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos gerais */
+input, select, textarea {
+  transition: all 0.2s ease-in-out;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #5c903a;
+  box-shadow: 0 0 0 3px rgba(92, 144, 58, 0.15);
+}
+
+/* Esconder barra de rolagem de forma limpa para elementos específicos */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ==========================================
+   ESTILOS ESPECÍFICOS PARA IMPRESSÃO (PDF)
+   ========================================== */
+@media print {
+  /* Ocultar elementos do painel web */
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt;
+    margin: 0;
+    padding: 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ajustar o container de visualização do PDF */
+  .print-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  /* Quebras de páginas */
+  .page-break-before {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
+  .page-break-after {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .page-break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Cabeçalho da página impressa */
+  @page {
+    size: A4;
+    margin: 1.5cm 1cm 1.5cm 1cm;
+  }
+
+  /* Marca d'água "Relatório Gama" no rodapé impresso */
+  .print-footer {
+    position: fixed;
+    bottom: -0.5cm;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 8pt;
+    color: #94a3b8;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 5px;
+    display: block !important;
+  }
+}
+
+/* Ocultar o rodapé na visualização da tela do app */
+.print-footer {
+  display: none;
+}

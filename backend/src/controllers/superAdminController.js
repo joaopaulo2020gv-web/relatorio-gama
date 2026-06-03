@@ -204,3 +204,131 @@ exports.getSystemStats = (req, res) => {
     }
   );
 };
+
+// ==========================================
+// MÉTODOS DE GERENCIAMENTO DE PLANOS
+// ==========================================
+
+// Listar todos os planos
+exports.listPlans = (req, res) => {
+  db.all(
+    `SELECT * FROM plans ORDER BY id ASC`,
+    [],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: 'Erro ao listar planos.' });
+      }
+      return res.json({ plans: rows });
+    }
+  );
+};
+
+// Criar um novo plano
+exports.createPlan = (req, res) => {
+  const { name, description } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: 'O nome do plano é obrigatório.' });
+  }
+
+  db.run(
+    `INSERT INTO plans (name, description) VALUES (?, ?)`,
+    [name, description || ''],
+    function (err) {
+      if (err) {
+        if (err.message.includes('unique constraint') || err.message.includes('UNIQUE constraint') || err.message.includes('plans_name_key')) {
+          return res.status(400).json({ error: 'Já existe um plano com este nome.' });
+        }
+        return res.status(500).json({ error: 'Erro ao criar plano.' });
+      }
+      return res.status(201).json({ message: 'Plano criado com sucesso!', plan_id: this.lastID });
+    }
+  );
+};
+
+// Editar um plano existente
+exports.updatePlan = async (req, res) => {
+  const { id } = req.params;
+  const { name, description } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: 'O nome do plano é obrigatório.' });
+  }
+
+  const client = await db.pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Buscar o nome antigo do plano
+    const planRes = await client.query(`SELECT name FROM plans WHERE id = $1`, [id]);
+    if (planRes.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: 'Plano não encontrado.' });
+    }
+    const oldName = planRes.rows[0].name;
+
+    // Atualizar a tabela de planos
+    await client.query(
+      `UPDATE plans SET name = $1, description = $2 WHERE id = $3`,
+      [name, description || '', id]
+    );
+
+    // Se o nome mudou, atualizar a tabela de empresas que usavam este plano
+    if (oldName !== name) {
+      await client.query(
+        `UPDATE companies SET plan_name = $1 WHERE plan_name = $2`,
+        [name, oldName]
+      );
+    }
+
+    await client.query("COMMIT");
+    return res.json({ message: 'Plano atualizado com sucesso!' });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error('Erro ao atualizar plano:', err);
+    if (err.message.includes('unique constraint') || err.message.includes('UNIQUE constraint') || err.message.includes('plans_name_key')) {
+      return res.status(400).json({ error: 'Já existe um plano com este nome.' });
+    }
+    return res.status(500).json({ error: 'Erro ao atualizar plano.' });
+  } finally {
+    client.release();
+  }
+};
+
+// Excluir um plano
+exports.deletePlan = async (req, res) => {
+  const { id } = req.params;
+
+  const client = await db.pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Buscar o plano
+    const planRes = await client.query(`SELECT name FROM plans WHERE id = $1`, [id]);
+    if (planRes.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: 'Plano não encontrado.' });
+    }
+    const planName = planRes.rows[0].name;
+
+    // Verificar se existem empresas usando este plano
+    const companyRes = await client.query(`SELECT COUNT(*) as count FROM companies WHERE plan_name = $1`, [planName]);
+    const count = parseInt(companyRes.rows[0].count, 10);
+    if (count > 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ 
+        error: `Não é possível excluir o plano pois há ${count} empresa(s) vinculada(s) a ele.` 
+      });
+    }
+
+    // Excluir o plano
+    await client.query(`DELETE FROM plans WHERE id = $1`, [id]);
+
+    await client.query("COMMIT");
+    return res.json({ message: 'Plano excluído com sucesso!' });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error('Erro ao excluir plano:', err);
+    return res.status(500).json({ error: 'Erro ao excluir plano.' });
+  } finally {
+    client.release();
+  }
+};

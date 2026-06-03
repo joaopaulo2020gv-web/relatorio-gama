@@ -193,10 +193,10 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
       <aside class="w-full md:w-64 bg-slate-800 border-r border-slate-700/60 flex flex-col">
         <div class="p-6 border-b border-slate-700 flex items-center space-x-3">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600 to-emerald-500 flex items-center justify-center font-extrabold text-white text-lg">
-            Γ
+            D
           </div>
           <div>
-            <h2 class="text-lg font-bold">Relatório Gama</h2>
+            <h2 class="text-lg font-bold">Relatório Drone</h2>
             <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Painel Administrativo</p>
           </div>
         </div>

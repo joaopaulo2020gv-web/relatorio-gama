@@ -64,7 +64,7 @@ export default function App() {
   if (loading) {
     return (
       <div class="min-h-screen bg-slate-900 flex items-center justify-center text-slate-400 font-bold text-sm">
-        Carregando aplicativo Relatório Gama...
+        Carregando aplicativo Relatório Drone...
       </div>
     );
   }

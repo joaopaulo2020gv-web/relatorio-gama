@@ -78,6 +78,27 @@ app.get('/api/super/stats',
   superAdminController.getSystemStats
 );
 
+app.get('/api/super/plans', 
+  auth.authenticateToken, 
+  auth.requireSuperAdmin, 
+  superAdminController.listPlans
+);
+app.post('/api/super/plans', 
+  auth.authenticateToken, 
+  auth.requireSuperAdmin, 
+  superAdminController.createPlan
+);
+app.put('/api/super/plans/:id', 
+  auth.authenticateToken, 
+  auth.requireSuperAdmin, 
+  superAdminController.updatePlan
+);
+app.delete('/api/super/plans/:id', 
+  auth.authenticateToken, 
+  auth.requireSuperAdmin, 
+  superAdminController.deletePlan
+);
+
 // ==========================================
 // ROTAS DO ADMIN DA EMPRESA (Nível 2)
 // ==========================================
@@ -138,7 +159,7 @@ app.post('/api/reports/upload',
 
 // Rota padrão de verificação de status
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'API do Relatório Gama funcionando!' });
+  res.json({ status: 'OK', message: 'API do Relatório Drone funcionando!' });
 });
 
 // Inicialização do servidor (condicional para local ou serverless)

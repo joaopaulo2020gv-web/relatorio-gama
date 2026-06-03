@@ -1,7 +1,7 @@
 {
-  "name": "relatorio-gama-backend",
+  "name": "relatorio-drone-backend",
   "version": "1.0.0",
-  "description": "Backend API para Relatório Gama SaaS",
+  "description": "Backend API para Relatório Drone SaaS",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

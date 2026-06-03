@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Plus, ShieldCheck, Landmark, Users, FileText, ToggleLeft, ToggleRight, Trash2, Pencil } from 'lucide-react';
+import { LogOut, Plus, ShieldCheck, Landmark, Users, FileText, ToggleLeft, ToggleRight, Trash2, Pencil, CreditCard } from 'lucide-react';
 
 export default function SuperAdmin({ onLogout }) {
   const [companies, setCompanies] = useState([]);
@@ -8,6 +8,10 @@ export default function SuperAdmin({ onLogout }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
   
+  // Abas
+  const [activeTab, setActiveTab] = useState('companies');
+  const [plans, setPlans] = useState([]);
+
   // Campos do formulário de nova empresa
   const [name, setName] = useState('');
   const [cnpj, setCnpj] = useState('');
@@ -18,6 +22,14 @@ export default function SuperAdmin({ onLogout }) {
   const [adminPassword, setAdminPassword] = useState('');
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
+
+  // Campos do formulário de plano
+  const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(null);
+  const [planNameInput, setPlanNameInput] = useState('');
+  const [planDescriptionInput, setPlanDescriptionInput] = useState('');
+  const [planFormError, setPlanFormError] = useState('');
+  const [planFormSuccess, setPlanFormSuccess] = useState('');
 
   const fetchStatsAndCompanies = async () => {
     try {
@@ -30,6 +42,10 @@ export default function SuperAdmin({ onLogout }) {
       const compRes = await fetch('/api/super/companies', { headers });
       const compData = await compRes.json();
       if (compRes.ok) setCompanies(compData.companies);
+
+      const plansRes = await fetch('/api/super/plans', { headers });
+      const plansData = await plansRes.json();
+      if (plansRes.ok) setPlans(plansData.plans || []);
 
     } catch (err) {
       console.error('Erro ao buscar dados:', err);
@@ -46,7 +62,7 @@ export default function SuperAdmin({ onLogout }) {
     setEditingCompany(null);
     setName('');
     setCnpj('');
-    setPlanName('Básico');
+    setPlanName(plans[0]?.name || 'Básico');
     setPlanExpiresAt('');
     setAdminName('');
     setAdminUsername('');
@@ -204,16 +220,105 @@ export default function SuperAdmin({ onLogout }) {
     }
   };
 
+  const openCreatePlanModal = () => {
+    setEditingPlan(null);
+    setPlanNameInput('');
+    setPlanDescriptionInput('');
+    setPlanFormError('');
+    setPlanFormSuccess('');
+    setPlanModalOpen(true);
+  };
+
+  const openEditPlanModal = (plan) => {
+    setEditingPlan(plan);
+    setPlanNameInput(plan.name);
+    setPlanDescriptionInput(plan.description || '');
+    setPlanFormError('');
+    setPlanFormSuccess('');
+    setPlanModalOpen(true);
+  };
+
+  const handleSavePlan = async (e) => {
+    e.preventDefault();
+    setPlanFormError('');
+    setPlanFormSuccess('');
+
+    if (!planNameInput.trim()) {
+      setPlanFormError('Por favor, preencha o nome do plano.');
+      return;
+    }
+
+    try {
+      const url = editingPlan 
+        ? `/api/super/plans/${editingPlan.id}`
+        : '/api/super/plans';
+      const method = editingPlan ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('gama_token')}`
+        },
+        body: JSON.stringify({
+          name: planNameInput,
+          description: planDescriptionInput
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao salvar plano.');
+      }
+
+      setPlanFormSuccess(editingPlan ? 'Plano atualizado com sucesso!' : 'Plano cadastrado com sucesso!');
+      
+      if (!editingPlan) {
+        setPlanNameInput('');
+        setPlanDescriptionInput('');
+      }
+
+      fetchStatsAndCompanies();
+      setTimeout(() => setPlanModalOpen(false), 1500);
+    } catch (err) {
+      setPlanFormError(err.message);
+    }
+  };
+
+  const handleDeletePlan = async (planId) => {
+    if (!window.confirm('Tem certeza absoluta que deseja excluir este plano?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/super/plans/${planId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('gama_token')}` }
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || 'Erro ao excluir plano.');
+        return;
+      }
+
+      fetchStatsAndCompanies();
+    } catch (err) {
+      console.error('Erro ao excluir plano:', err);
+      alert('Erro ao excluir plano.');
+    }
+  };
+
   return (
     <div class="min-h-screen bg-slate-900 text-slate-100 font-sans">
       {/* Header */}
       <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
         <div class="flex items-center space-x-3">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600 to-emerald-500 flex items-center justify-center font-extrabold text-white text-lg">
-            Γ
+            D
           </div>
           <div>
-            <h2 class="text-xl font-bold">Relatório Gama</h2>
+            <h2 class="text-xl font-bold">Relatório Drone</h2>
             <p class="text-xs text-slate-400 font-semibold">Painel Geral do Super Administrador</p>
           </div>
         </div>
@@ -269,101 +374,193 @@ export default function SuperAdmin({ onLogout }) {
           </div>
         </section>
 
-        {/* Company List */}
-        <section class="bg-slate-800 border border-slate-700/50 rounded-2xl overflow-hidden">
-          <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between">
-            <h3 class="text-lg font-bold">Empresas Contratantes</h3>
-            <button 
-              onClick={openCreateModal}
-              class="flex items-center space-x-2 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary-600/10 transition-all duration-300"
-            >
-              <Plus size={16} />
-              <span>Adicionar Cliente</span>
-            </button>
-          </div>
+        {/* Tabs Navigation */}
+        <div class="flex border-b border-slate-700 space-x-6">
+          <button
+            onClick={() => setActiveTab('companies')}
+            class={`pb-4 text-sm font-bold border-b-2 transition-all duration-200 ${
+              activeTab === 'companies' 
+                ? 'border-primary-500 text-primary-400' 
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Clientes (Empresas)
+          </button>
+          <button
+            onClick={() => setActiveTab('plans')}
+            class={`pb-4 text-sm font-bold border-b-2 transition-all duration-200 ${
+              activeTab === 'plans' 
+                ? 'border-primary-500 text-primary-400' 
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Planos de Assinatura
+          </button>
+        </div>
 
-          {loading ? (
-            <div class="p-12 text-center text-slate-400">Carregando dados da plataforma...</div>
-          ) : companies.length === 0 ? (
-            <div class="p-12 text-center text-slate-400">Nenhum cliente cadastrado no momento.</div>
-          ) : (
-            <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse">
-                <thead>
-                  <tr class="bg-slate-900/50 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-700">
-                    <th class="px-6 py-4">Empresa / CNPJ</th>
-                    <th class="px-6 py-4">Plano</th>
-                    <th class="px-6 py-4">Vencimento</th>
-                    <th class="px-6 py-4">Pilotos</th>
-                    <th class="px-6 py-4">Laudos</th>
-                    <th class="px-6 py-4 text-center">Status</th>
-                    <th class="px-6 py-4 text-center">Ações</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-700/50">
-                  {companies.map((company) => (
-                    <tr key={company.id} class="hover:bg-slate-700/20 transition-colors">
-                      <td class="px-6 py-4">
-                        <div class="font-bold text-white">{company.name}</div>
-                        <div class="text-xs text-slate-400 font-semibold">{company.cnpj || 'CNPJ não informado'}</div>
-                      </td>
-                      <td class="px-6 py-4 font-semibold text-slate-300">
-                        {company.plan_name}
-                      </td>
-                      <td class="px-6 py-4 text-sm font-semibold text-slate-300">
-                        {company.plan_expires_at ? new Date(company.plan_expires_at).toLocaleDateString('pt-BR') : 'Sem data'}
-                      </td>
-                      <td class="px-6 py-4 text-sm font-bold text-slate-300">
-                        {company.pilot_count}
-                      </td>
-                      <td class="px-6 py-4 text-sm font-bold text-slate-300">
-                        {company.report_count}
-                      </td>
-                      <td class="px-6 py-4 text-center">
-                        <span class={`inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-bold ${
-                          company.plan_status === 'active' 
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                        }`}>
-                          {company.plan_status === 'active' ? 'Ativo' : 'Suspenso'}
-                        </span>
-                      </td>
-                      <td class="px-6 py-4">
-                        <div class="flex items-center justify-center space-x-3">
-                          <button
-                            onClick={() => openEditModal(company)}
-                            title="Editar Empresa"
-                            class="p-2 bg-slate-700/50 hover:bg-primary-500/10 hover:text-primary-400 border border-slate-600/50 hover:border-primary-500/20 text-slate-300 rounded-xl transition-all duration-200"
-                          >
-                            <Pencil size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleToggleStatus(company)}
-                            title={company.plan_status === 'active' ? 'Suspender assinatura' : 'Ativar assinatura'}
-                            class={`p-2 rounded-xl border transition-all duration-200 ${
-                              company.plan_status === 'active' 
-                                ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20' 
-                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
-                            }`}
-                          >
-                            {company.plan_status === 'active' ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCompany(company.id)}
-                            title="Remover Empresa"
-                            class="p-2 bg-slate-700/50 hover:bg-red-500/10 hover:text-red-400 border border-slate-600/50 hover:border-red-500/20 text-slate-300 rounded-xl transition-all duration-200"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {activeTab === 'companies' ? (
+          /* Company List */
+          <section class="bg-slate-800 border border-slate-700/50 rounded-2xl overflow-hidden animate-fadeIn">
+            <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between">
+              <h3 class="text-lg font-bold">Empresas Contratantes</h3>
+              <button 
+                onClick={openCreateModal}
+                class="flex items-center space-x-2 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary-600/10 transition-all duration-300"
+              >
+                <Plus size={16} />
+                <span>Adicionar Cliente</span>
+              </button>
             </div>
-          )}
-        </section>
+
+            {loading ? (
+              <div class="p-12 text-center text-slate-400">Carregando dados da plataforma...</div>
+            ) : companies.length === 0 ? (
+              <div class="p-12 text-center text-slate-400">Nenhum cliente cadastrado no momento.</div>
+            ) : (
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-slate-900/50 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-700">
+                      <th class="px-6 py-4">Empresa / CNPJ</th>
+                      <th class="px-6 py-4">Plano</th>
+                      <th class="px-6 py-4">Vencimento</th>
+                      <th class="px-6 py-4">Pilotos</th>
+                      <th class="px-6 py-4">Laudos</th>
+                      <th class="px-6 py-4 text-center">Status</th>
+                      <th class="px-6 py-4 text-center">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-700/50">
+                    {companies.map((company) => (
+                      <tr key={company.id} class="hover:bg-slate-700/20 transition-colors">
+                        <td class="px-6 py-4">
+                          <div class="font-bold text-white">{company.name}</div>
+                          <div class="text-xs text-slate-400 font-semibold">{company.cnpj || 'CNPJ não informado'}</div>
+                        </td>
+                        <td class="px-6 py-4 font-semibold text-slate-300">
+                          {company.plan_name}
+                        </td>
+                        <td class="px-6 py-4 text-sm font-semibold text-slate-300">
+                          {company.plan_expires_at ? new Date(company.plan_expires_at).toLocaleDateString('pt-BR') : 'Sem data'}
+                        </td>
+                        <td class="px-6 py-4 text-sm font-bold text-slate-300">
+                          {company.pilot_count}
+                        </td>
+                        <td class="px-6 py-4 text-sm font-bold text-slate-300">
+                          {company.report_count}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                          <span class={`inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-bold ${
+                            company.plan_status === 'active' 
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                          }`}>
+                            {company.plan_status === 'active' ? 'Ativo' : 'Suspenso'}
+                          </span>
+                        </td>
+                        <td class="px-6 py-4">
+                          <div class="flex items-center justify-center space-x-3">
+                            <button
+                              onClick={() => openEditModal(company)}
+                              title="Editar Empresa"
+                              class="p-2 bg-slate-700/50 hover:bg-primary-500/10 hover:text-primary-400 border border-slate-600/50 hover:border-primary-500/20 text-slate-300 rounded-xl transition-all duration-200"
+                            >
+                              <Pencil size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleToggleStatus(company)}
+                              title={company.plan_status === 'active' ? 'Suspender assinatura' : 'Ativar assinatura'}
+                              class={`p-2 rounded-xl border transition-all duration-200 ${
+                                company.plan_status === 'active' 
+                                  ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20' 
+                                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
+                              }`}
+                            >
+                              {company.plan_status === 'active' ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCompany(company.id)}
+                              title="Remover Empresa"
+                              class="p-2 bg-slate-700/50 hover:bg-red-500/10 hover:text-red-400 border border-slate-600/50 hover:border-red-500/20 text-slate-300 rounded-xl transition-all duration-200"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        ) : (
+          /* Plans List */
+          <section class="bg-slate-800 border border-slate-700/50 rounded-2xl overflow-hidden animate-fadeIn">
+            <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between">
+              <h3 class="text-lg font-bold">Planos de Assinatura</h3>
+              <button 
+                onClick={openCreatePlanModal}
+                class="flex items-center space-x-2 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary-600/10 transition-all duration-300"
+              >
+                <Plus size={16} />
+                <span>Adicionar Plano</span>
+              </button>
+            </div>
+
+            {loading ? (
+              <div class="p-12 text-center text-slate-400">Carregando planos...</div>
+            ) : plans.length === 0 ? (
+              <div class="p-12 text-center text-slate-400">Nenhum plano cadastrado no momento.</div>
+            ) : (
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-slate-900/50 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-700">
+                      <th class="px-6 py-4">Nome do Plano</th>
+                      <th class="px-6 py-4">Descrição</th>
+                      <th class="px-6 py-4">Data de Criação</th>
+                      <th class="px-6 py-4 text-center">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-700/50">
+                    {plans.map((plan) => (
+                      <tr key={plan.id} class="hover:bg-slate-700/20 transition-colors">
+                        <td class="px-6 py-4 font-bold text-white">
+                          {plan.name}
+                        </td>
+                        <td class="px-6 py-4 text-slate-300 font-semibold">
+                          {plan.description || 'Sem descrição'}
+                        </td>
+                        <td class="px-6 py-4 text-sm font-semibold text-slate-300">
+                          {plan.created_at ? new Date(plan.created_at).toLocaleDateString('pt-BR') : 'Sem data'}
+                        </td>
+                        <td class="px-6 py-4">
+                          <div class="flex items-center justify-center space-x-3">
+                            <button
+                              onClick={() => openEditPlanModal(plan)}
+                              title="Editar Plano"
+                              class="p-2 bg-slate-700/50 hover:bg-primary-500/10 hover:text-primary-400 border border-slate-600/50 hover:border-primary-500/20 text-slate-300 rounded-xl transition-all duration-200"
+                            >
+                              <Pencil size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePlan(plan.id)}
+                              title="Remover Plano"
+                              class="p-2 bg-slate-700/50 hover:bg-red-500/10 hover:text-red-400 border border-slate-600/50 hover:border-red-500/20 text-slate-300 rounded-xl transition-all duration-200"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
       </main>
 
       {/* Modal - Cadastro ou Edição de Empresa */}
@@ -425,8 +622,14 @@ export default function SuperAdmin({ onLogout }) {
                         onChange={(e) => setPlanName(e.target.value)}
                         class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                       >
-                        <option value="Básico">Básico (Até 3 pilotos)</option>
-                        <option value="Pro">Pro (Ilimitados)</option>
+                        {plans.map((p) => (
+                          <option key={p.id} value={p.name}>
+                            {p.name} {p.description ? `(${p.description})` : ''}
+                          </option>
+                        ))}
+                        {plans.length === 0 && (
+                          <option value="Básico">Básico</option>
+                        )}
                       </select>
                     </div>
                     <div>
@@ -495,6 +698,76 @@ export default function SuperAdmin({ onLogout }) {
                   class="px-5 py-2.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white font-bold rounded-xl text-sm shadow-lg transition-all"
                 >
                   {editingCompany ? 'Salvar Alterações' : 'Salvar Cliente'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal - Cadastro ou Edição de Plano */}
+      {planModalOpen && (
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div class="w-full max-w-lg bg-slate-800 border border-slate-700 p-8 rounded-3xl shadow-2xl relative max-h-[90vh] overflow-y-auto no-scrollbar">
+            <div class="flex items-center justify-between mb-6">
+              <h4 class="text-xl font-bold">{editingPlan ? 'Editar Plano' : 'Cadastrar Novo Plano'}</h4>
+              <button 
+                onClick={() => setPlanModalOpen(false)}
+                class="text-slate-400 hover:text-white font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {planFormError && (
+              <div class="bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl text-sm mb-6">
+                {planFormError}
+              </div>
+            )}
+            {planFormSuccess && (
+              <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-200 px-4 py-3 rounded-xl text-sm mb-6">
+                {planFormSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleSavePlan} class="space-y-6">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome do Plano *</label>
+                  <input
+                    type="text"
+                    required
+                    value={planNameInput}
+                    onChange={(e) => setPlanNameInput(e.target.value)}
+                    placeholder="Ex: Gold"
+                    class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                  />
+                </div>
+                <div>
+                  <label class="block text-slate-300 text-xs font-bold mb-1.5">Descrição (opcional)</label>
+                  <input
+                    type="text"
+                    value={planDescriptionInput}
+                    onChange={(e) => setPlanDescriptionInput(e.target.value)}
+                    placeholder="Ex: Até 10 pilotos e suporte premium"
+                    class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                  />
+                </div>
+              </div>
+
+              <div class="flex justify-end space-x-3 pt-6 border-t border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setPlanModalOpen(false)}
+                  class="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-xl text-sm transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  class="px-5 py-2.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white font-bold rounded-xl text-sm shadow-lg transition-all"
+                >
+                  {editingPlan ? 'Salvar Alterações' : 'Salvar Plano'}
                 </button>
               </div>
             </form>

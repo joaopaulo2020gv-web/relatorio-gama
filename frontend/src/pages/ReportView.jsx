@@ -405,7 +405,7 @@ export default function ReportView({ reportId, onBack }) {
 
           {/* Rodapé impresso (Marca d'água) */}
           <div class="print-footer text-center pt-4 text-[10px] text-slate-400 font-medium border-t border-slate-100 mt-16">
-            Gerado por <strong>Relatório Gama</strong> - www.relatoriogama.com.br
+            Gerado por <strong>Relatório Drone</strong> - www.relatoriodrone.com.br
           </div>
         </div>
 

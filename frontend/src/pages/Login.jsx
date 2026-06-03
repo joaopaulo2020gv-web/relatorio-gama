@@ -50,9 +50,9 @@ export default function Login({ onLoginSuccess }) {
       <div class="w-full max-w-md bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 p-8 rounded-3xl shadow-2xl relative z-10">
         <div class="text-center mb-8">
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary-600 to-emerald-500 text-white font-extrabold text-2xl mb-4 shadow-lg shadow-primary-500/20">
-            Γ
+            D
           </div>
-          <h1 class="text-3xl font-extrabold text-white tracking-tight">Relatório Gama</h1>
+          <h1 class="text-3xl font-extrabold text-white tracking-tight">Relatório Drone</h1>
           <p class="text-slate-400 mt-2 font-medium">Gestão de Laudos de Pulverização por Drones</p>
         </div>
 
@@ -102,7 +102,7 @@ export default function Login({ onLoginSuccess }) {
         </form>
 
         <div class="mt-8 text-center text-xs text-slate-500">
-          &copy; {new Date().getFullYear()} Relatório Gama. Todos os direitos reservados.
+          &copy; {new Date().getFullYear()} Relatório Drone. Todos os direitos reservados.
         </div>
       </div>
     </div>

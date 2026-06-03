@@ -5,6 +5,28 @@ async function initPg(pool) {
   try {
     console.log('Iniciando inicialização do schema no PostgreSQL...');
 
+    // 0. Tabela de Planos
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS plans (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Tabela "plans" verificada/criada.');
+
+    // Inicializar planos padrões se a tabela estiver vazia
+    const checkPlans = await client.query("SELECT COUNT(*) as count FROM plans");
+    if (parseInt(checkPlans.rows[0].count, 10) === 0) {
+      await client.query(`
+        INSERT INTO plans (name, description) VALUES 
+        ('Básico', 'Até 3 pilotos'),
+        ('Pro', 'Ilimitados')
+      `);
+      console.log('Planos padrões "Básico" e "Pro" criados com sucesso!');
+    }
+
     // 1. Tabela de Empresas
     await client.query(`
       CREATE TABLE IF NOT EXISTS companies (

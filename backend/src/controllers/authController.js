@@ -38,7 +38,7 @@ exports.login = (req, res) => {
       if (user.role !== 'superadmin') {
         if (!user.plan_status || user.plan_status !== 'active') {
           return res.status(403).json({ 
-            error: 'O acesso da sua empresa está suspenso ou inativo. Entre em contato com o suporte do Relatório Gama.' 
+            error: 'O acesso da sua empresa está suspenso ou inativo. Entre em contato com o suporte do Relatório Drone.' 
           });
         }
       }

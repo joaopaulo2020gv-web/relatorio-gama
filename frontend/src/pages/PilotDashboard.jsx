@@ -51,10 +51,10 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport 
       <header class="bg-slate-800 border-b border-slate-700/60 px-6 py-4 flex items-center justify-between">
         <div class="flex items-center space-x-3">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600 to-emerald-500 flex items-center justify-center font-extrabold text-white text-lg">
-            Γ
+            D
           </div>
           <div>
-            <h2 class="text-lg font-bold">Relatório Gama</h2>
+            <h2 class="text-lg font-bold">Relatório Drone</h2>
             <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">{user.company_name || 'Empresa'}</p>
           </div>
         </div>

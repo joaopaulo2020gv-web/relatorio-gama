@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Plus, ShieldCheck, Landmark, Users, FileText, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
+import { LogOut, Plus, ShieldCheck, Landmark, Users, FileText, ToggleLeft, ToggleRight, Trash2, Pencil } from 'lucide-react';
 
 export default function SuperAdmin({ onLogout }) {
   const [companies, setCompanies] = useState([]);
   const [stats, setStats] = useState({ total_companies: 0, active_companies: 0, total_pilots: 0, total_reports: 0 });
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingCompany, setEditingCompany] = useState(null);
   
   // Campos do formulário de nova empresa
   const [name, setName] = useState('');
@@ -41,48 +42,104 @@ export default function SuperAdmin({ onLogout }) {
     fetchStatsAndCompanies();
   }, []);
 
-  const handleCreateCompany = async (e) => {
+  const openCreateModal = () => {
+    setEditingCompany(null);
+    setName('');
+    setCnpj('');
+    setPlanName('Básico');
+    setPlanExpiresAt('');
+    setAdminName('');
+    setAdminUsername('');
+    setAdminPassword('');
+    setFormError('');
+    setFormSuccess('');
+    setModalOpen(true);
+  };
+
+  const openEditModal = (company) => {
+    setEditingCompany(company);
+    setName(company.name);
+    setCnpj(company.cnpj || '');
+    setPlanName(company.plan_name || 'Básico');
+    
+    let dateStr = '';
+    if (company.plan_expires_at) {
+      try {
+        dateStr = new Date(company.plan_expires_at).toISOString().split('T')[0];
+      } catch (e) {
+        dateStr = company.plan_expires_at;
+      }
+    }
+    setPlanExpiresAt(dateStr);
+    setFormError('');
+    setFormSuccess('');
+    setModalOpen(true);
+  };
+
+  const handleSaveCompany = async (e) => {
     e.preventDefault();
     setFormError('');
     setFormSuccess('');
 
-    if (!name || !adminName || !adminUsername || !adminPassword) {
-      setFormError('Por favor, preencha todos os campos obrigatórios.');
+    if (!name) {
+      setFormError('Por favor, preencha o nome da empresa.');
+      return;
+    }
+
+    if (!editingCompany && (!adminName || !adminUsername || !adminPassword)) {
+      setFormError('Por favor, preencha todos os campos obrigatórios da conta do administrador.');
       return;
     }
 
     try {
-      const response = await fetch('/api/super/companies', {
-        method: 'POST',
+      const url = editingCompany 
+        ? `/api/super/companies/${editingCompany.id}`
+        : '/api/super/companies';
+      const method = editingCompany ? 'PUT' : 'POST';
+      
+      const bodyObj = editingCompany
+        ? {
+            name,
+            cnpj,
+            plan_name: planName,
+            plan_expires_at: planExpiresAt,
+            plan_status: editingCompany.plan_status
+          }
+        : {
+            name,
+            cnpj,
+            plan_name: planName,
+            plan_expires_at: planExpiresAt,
+            admin_name: adminName,
+            admin_username: adminUsername,
+            admin_password: adminPassword
+          };
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('gama_token')}`
         },
-        body: JSON.stringify({
-          name,
-          cnpj,
-          plan_name: planName,
-          plan_expires_at: planExpiresAt,
-          admin_name: adminName,
-          admin_username: adminUsername,
-          admin_password: adminPassword
-        })
+        body: JSON.stringify(bodyObj)
       });
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao cadastrar empresa.');
+        throw new Error(data.error || 'Erro ao salvar empresa.');
       }
 
-      setFormSuccess('Empresa cadastrada com sucesso!');
-      // Limpar formulário
-      setName('');
-      setCnpj('');
-      setPlanName('Básico');
-      setPlanExpiresAt('');
-      setAdminName('');
-      setAdminUsername('');
-      setAdminPassword('');
+      setFormSuccess(editingCompany ? 'Empresa atualizada com sucesso!' : 'Empresa cadastrada com sucesso!');
+      
+      if (!editingCompany) {
+        setName('');
+        setCnpj('');
+        setPlanName('Básico');
+        setPlanExpiresAt('');
+        setAdminName('');
+        setAdminUsername('');
+        setAdminPassword('');
+      }
 
       fetchStatsAndCompanies();
       setTimeout(() => setModalOpen(false), 1500);
@@ -206,7 +263,7 @@ export default function SuperAdmin({ onLogout }) {
           <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between">
             <h3 class="text-lg font-bold">Empresas Contratantes</h3>
             <button 
-              onClick={() => setModalOpen(true)}
+              onClick={openCreateModal}
               class="flex items-center space-x-2 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary-600/10 transition-all duration-300"
             >
               <Plus size={16} />
@@ -263,6 +320,13 @@ export default function SuperAdmin({ onLogout }) {
                       <td class="px-6 py-4">
                         <div class="flex items-center justify-center space-x-3">
                           <button
+                            onClick={() => openEditModal(company)}
+                            title="Editar Empresa"
+                            class="p-2 bg-slate-700/50 hover:bg-primary-500/10 hover:text-primary-400 border border-slate-600/50 hover:border-primary-500/20 text-slate-300 rounded-xl transition-all duration-200"
+                          >
+                            <Pencil size={18} />
+                          </button>
+                          <button
                             onClick={() => handleToggleStatus(company)}
                             title={company.plan_status === 'active' ? 'Suspender assinatura' : 'Ativar assinatura'}
                             class={`p-2 rounded-xl border transition-all duration-200 ${
@@ -291,12 +355,12 @@ export default function SuperAdmin({ onLogout }) {
         </section>
       </main>
 
-      {/* Modal - Cadastro de Empresa */}
+      {/* Modal - Cadastro ou Edição de Empresa */}
       {modalOpen && (
         <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div class="w-full max-w-2xl bg-slate-800 border border-slate-700 p-8 rounded-3xl shadow-2xl relative max-h-[90vh] overflow-y-auto no-scrollbar">
             <div class="flex items-center justify-between mb-6">
-              <h4 class="text-xl font-bold">Cadastrar Novo Cliente (Empresa)</h4>
+              <h4 class="text-xl font-bold">{editingCompany ? 'Editar Cliente (Empresa)' : 'Cadastrar Novo Cliente (Empresa)'}</h4>
               <button 
                 onClick={() => setModalOpen(false)}
                 class="text-slate-400 hover:text-white font-bold"
@@ -316,8 +380,8 @@ export default function SuperAdmin({ onLogout }) {
               </div>
             )}
 
-            <form onSubmit={handleCreateCompany} class="space-y-6">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleSaveCompany} class="space-y-6">
+              <div class={editingCompany ? "grid grid-cols-1 gap-6" : "grid grid-cols-1 md:grid-cols-2 gap-6"}>
                 {/* Dados da Empresa */}
                 <div class="space-y-4">
                   <h5 class="text-sm font-bold text-primary-400 border-b border-slate-700 pb-1 uppercase tracking-wider">Dados do Assinante</h5>
@@ -366,43 +430,45 @@ export default function SuperAdmin({ onLogout }) {
                   </div>
                 </div>
 
-                {/* Administrador Inicial */}
-                <div class="space-y-4">
-                  <h5 class="text-sm font-bold text-primary-400 border-b border-slate-700 pb-1 uppercase tracking-wider">Conta do Admin da Empresa</h5>
-                  <div>
-                    <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome Completo do Admin *</label>
-                    <input
-                      type="text"
-                      required
-                      value={adminName}
-                      onChange={(e) => setAdminName(e.target.value)}
-                      placeholder="Ex: Marcelo Sgarbi Dias"
-                      class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
-                    />
+                {/* Administrador Inicial (Apenas na criação) */}
+                {!editingCompany && (
+                  <div class="space-y-4">
+                    <h5 class="text-sm font-bold text-primary-400 border-b border-slate-700 pb-1 uppercase tracking-wider">Conta do Admin da Empresa</h5>
+                    <div>
+                      <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome Completo do Admin *</label>
+                      <input
+                        type="text"
+                        required
+                        value={adminName}
+                        onChange={(e) => setAdminName(e.target.value)}
+                        placeholder="Ex: Marcelo Sgarbi Dias"
+                        class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome de Usuário *</label>
+                      <input
+                        type="text"
+                        required
+                        value={adminUsername}
+                        onChange={(e) => setAdminUsername(e.target.value)}
+                        placeholder="Ex: marcelo.admin"
+                        class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-slate-300 text-xs font-bold mb-1.5">Senha Provisória *</label>
+                      <input
+                        type="password"
+                        required
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        placeholder="Mínimo 6 caracteres"
+                        class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome de Usuário *</label>
-                    <input
-                      type="text"
-                      required
-                      value={adminUsername}
-                      onChange={(e) => setAdminUsername(e.target.value)}
-                      placeholder="Ex: marcelo.admin"
-                      class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-slate-300 text-xs font-bold mb-1.5">Senha Provisória *</label>
-                    <input
-                      type="password"
-                      required
-                      value={adminPassword}
-                      onChange={(e) => setAdminPassword(e.target.value)}
-                      placeholder="Mínimo 6 caracteres"
-                      class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
-                    />
-                  </div>
-                </div>
+                )}
               </div>
 
               <div class="flex justify-end space-x-3 pt-6 border-t border-slate-700">
@@ -417,7 +483,7 @@ export default function SuperAdmin({ onLogout }) {
                   type="submit"
                   class="px-5 py-2.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white font-bold rounded-xl text-sm shadow-lg transition-all"
                 >
-                  Salvar Cliente
+                  {editingCompany ? 'Salvar Alterações' : 'Salvar Cliente'}
                 </button>
               </div>
             </form>

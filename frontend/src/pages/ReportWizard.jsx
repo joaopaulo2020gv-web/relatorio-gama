@@ -1095,7 +1095,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
                       <div class="absolute inset-0 bg-black/60 flex items-center justify-center text-xs">Aguarde...</div>
                     )}
                   </div>
-                  <label class="mt-3 cursor-pointer flex items-center space-x-1.5 bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold">
+                  <label class="mt-3 cursor-pointer flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-white border border-slate-300 dark:border-slate-600/50 px-3 py-1.5 rounded-lg text-xs font-bold">
                     <Camera size={14} />
                     <span>Tirar Foto / Anexar</span>
                     <input
@@ -1169,7 +1169,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
                           <span class="text-xs text-slate-600 font-bold">Carregar Imagem</span>
                         )}
                       </div>
-                      <label class="mt-2.5 cursor-pointer flex items-center space-x-1.5 bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold">
+                      <label class="mt-2.5 cursor-pointer flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-white border border-slate-300 dark:border-slate-600/50 px-3 py-1.5 rounded-lg text-xs font-bold">
                         <Camera size={13} />
                         <span>Carregar Mapa</span>
                         <input
@@ -1289,7 +1289,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
             type="button"
             disabled={step === 1}
             onClick={() => { triggerHaptic(10); setStep(step - 1); }}
-            class="flex items-center space-x-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 px-5 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-30 disabled:pointer-events-none"
+            class="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600/50 px-5 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-30 disabled:pointer-events-none"
           >
             <ChevronLeft size={16} />
             <span>Voltar</span>

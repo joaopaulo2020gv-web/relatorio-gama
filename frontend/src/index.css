@@ -114,3 +114,95 @@ input:focus, select:focus, textarea:focus {
 .print-footer {
   display: none;
 }
+
+/* ==========================================
+   SUPORTE AO MODO CLARO (LIGHT MODE) - DINÂMICO
+   ========================================== */
+html:not(.dark) {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+html:not(.dark) body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+html:not(.dark) {
+  /* Redefinição de Backgrounds */
+  .bg-slate-900, 
+  .bg-slate-950, 
+  .bg-slate-900\/50, 
+  .bg-slate-900\/40,
+  .bg-slate-950\/50,
+  .bg-slate-950\/20,
+  .bg-slate-900\/30 {
+    background-color: #f8fafc !important; /* slate-50 */
+    color: #0f172a !important;
+  }
+
+  .bg-slate-800, 
+  .bg-slate-800\/80, 
+  .bg-slate-800\/60,
+  .bg-slate-900\/60,
+  .bg-slate-900\/20,
+  .bg-slate-900\/10 {
+    background-color: #ffffff !important; /* white */
+    color: #0f172a !important;
+  }
+  
+  .bg-slate-700\/40,
+  .bg-slate-700\/50,
+  .bg-slate-700\/30,
+  .bg-slate-700\/20,
+  .bg-slate-700\/10,
+  .bg-slate-100 {
+    background-color: #f1f5f9 !important; /* slate-100 */
+  }
+
+  /* Redefinição de Textos */
+  .text-slate-100, 
+  .text-slate-200, 
+  .text-slate-350,
+  .text-slate-300,
+  .text-slate-300\/80,
+  .text-slate-50 {
+    color: #1e293b !important; /* slate-800 */
+  }
+
+  .text-slate-400,
+  .text-slate-450 {
+    color: #64748b !important; /* slate-500 */
+  }
+
+  .text-slate-500 {
+    color: #475569 !important; /* slate-600 */
+  }
+
+  /* Redefinição de Bordas */
+  .border-slate-700, 
+  .border-slate-700\/60, 
+  .border-slate-700\/40, 
+  .border-slate-700\/50,
+  .border-slate-700\/30,
+  .border-slate-600\/50,
+  .border-slate-800 {
+    border-color: #e2e8f0 !important; /* slate-200 */
+  }
+
+  /* Elementos de Formulário */
+  input, select, textarea {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: #94a3b8 !important;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: #5c903a !important;
+    box-shadow: 0 0 0 3px rgba(92, 144, 58, 0.15) !important;
+  }
+}

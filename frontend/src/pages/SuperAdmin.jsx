@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Plus, ShieldCheck, Landmark, Users, FileText, ToggleLeft, ToggleRight, Trash2, Pencil, CreditCard } from 'lucide-react';
+import { LogOut, Plus, ShieldCheck, Landmark, Users, FileText, ToggleLeft, ToggleRight, Trash2, Pencil, CreditCard, Sun, Moon } from 'lucide-react';
 
-export default function SuperAdmin({ onLogout }) {
+export default function SuperAdmin({ onLogout, theme, toggleTheme }) {
   const [companies, setCompanies] = useState([]);
   const [stats, setStats] = useState({ total_companies: 0, active_companies: 0, total_pilots: 0, total_reports: 0 });
   const [loading, setLoading] = useState(true);
@@ -374,25 +374,36 @@ export default function SuperAdmin({ onLogout }) {
   };
 
   return (
-    <div class="min-h-screen bg-slate-900 text-slate-100 font-sans">
+    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200">
       {/* Header */}
-      <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
+      <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between transition-colors duration-200">
         <div class="flex items-center space-x-3">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600 to-emerald-500 flex items-center justify-center font-extrabold text-white text-lg">
             D
           </div>
           <div>
-            <h2 class="text-xl font-bold">AgroSkan</h2>
-            <p class="text-xs text-slate-400 font-semibold">Painel Geral do Super Administrador</p>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white">AgroSkan</h2>
+            <p class="text-xs text-slate-550 dark:text-slate-400 font-semibold">Painel Geral do Super Administrador</p>
           </div>
         </div>
-        <button 
-          onClick={onLogout}
-          class="flex items-center space-x-2 bg-slate-700/50 hover:bg-red-500/10 hover:text-red-200 border border-slate-600/50 hover:border-red-500/20 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
-        >
-          <LogOut size={16} />
-          <span>Sair</span>
-        </button>
+        <div class="flex items-center space-x-3">
+          {/* Botão de Tema */}
+          <button
+            onClick={toggleTheme}
+            type="button"
+            class="p-2.5 bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-slate-600/50 rounded-xl transition-all shadow-xs"
+            title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+          <button 
+            onClick={onLogout}
+            class="flex items-center space-x-2 bg-slate-100 hover:bg-red-500/10 hover:text-red-650 dark:bg-slate-700/50 dark:hover:bg-red-500/10 dark:hover:text-red-200 border border-slate-200 dark:border-slate-600/50 dark:hover:border-red-500/20 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+          >
+            <LogOut size={16} />
+            <span>Sair</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Content */}

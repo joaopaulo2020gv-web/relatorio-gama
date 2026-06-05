@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Save, Plus, Trash2, Camera, MapPin, Thermometer, Droplet, DollarSign, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Save, Plus, Trash2, Camera, MapPin, Thermometer, Droplet, DollarSign, Calendar, Sun, Moon } from 'lucide-react';
 import { saveDraft } from '../utils/offlineDb';
 
 // Função auxiliar para converter arquivo em String Base64 para armazenamento offline
@@ -66,7 +66,7 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.7) =
   });
 };
 
-export default function ReportWizard({ onCancel, onSaveSuccess }) {
+export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleTheme }) {
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -397,22 +397,31 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
   };
 
   return (
-    <div class="min-h-screen bg-slate-900 text-slate-100 font-sans pb-12">
+    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-850 dark:text-slate-100 font-sans pb-12 transition-colors duration-200">
       {/* Header Wizard */}
-      <header class="bg-slate-800 border-b border-slate-700/60 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
+      <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/60 px-6 py-4 flex items-center justify-between sticky top-0 z-30 transition-colors duration-200">
         <div class="flex items-center space-x-3">
-          <button onClick={onCancel} class="text-slate-400 hover:text-white font-bold text-sm">
+          <button onClick={onCancel} class="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white font-bold text-sm">
             ← Sair do Assistente
           </button>
         </div>
         <div class="text-center">
-          <span class="text-xs text-primary-400 font-bold uppercase tracking-wider">Passo {step} de 6</span>
-          <h2 class="text-sm font-black text-white">Criando Relatório</h2>
+          <span class="text-xs text-primary-600 dark:text-primary-400 font-bold uppercase tracking-wider">Passo {step} de 6</span>
+          <h2 class="text-sm font-black text-slate-900 dark:text-white">Criando Relatório</h2>
         </div>
-        <div>
+        <div class="flex items-center space-x-2">
+          {/* Botão de Tema */}
+          <button
+            onClick={toggleTheme}
+            type="button"
+            class="p-2 bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-slate-600/50 rounded-xl transition-all shadow-xs"
+            title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+          >
+            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
           <button
             onClick={handleSaveReport}
-            class="flex items-center space-x-1.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md"
+            class="flex items-center space-x-1.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md animate-pulse"
           >
             <Save size={14} />
             <span>Finalizar</span>

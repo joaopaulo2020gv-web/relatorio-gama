@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, ArrowLeft } from 'lucide-react';
+import { Printer, ArrowLeft, Sun, Moon } from 'lucide-react';
 
-export default function ReportView({ reportId, onBack }) {
+export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -37,17 +37,30 @@ export default function ReportView({ reportId, onBack }) {
   const pilotResponsible = report.pilot_name;
 
   return (
-    <div class="report-view-container min-h-screen bg-slate-900 md:p-6 text-slate-900 font-sans">
+    <div class="report-view-container min-h-screen bg-slate-50 dark:bg-slate-900 md:p-6 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200">
       
       {/* Botões do Topo (Escondidos na Impressão) */}
       <div class="max-w-4xl mx-auto mb-6 px-4 flex items-center justify-between no-print">
-        <button
-          onClick={onBack}
-          class="flex items-center space-x-2 text-slate-300 hover:text-white font-bold text-sm bg-slate-800 border border-slate-700/60 px-4 py-2.5 rounded-xl transition-all"
-        >
-          <ArrowLeft size={16} />
-          <span>Voltar ao Painel</span>
-        </button>
+        <div class="flex items-center space-x-2">
+          <button
+            onClick={onBack}
+            class="flex items-center space-x-2 text-slate-650 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white font-bold text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 px-4 py-2.5 rounded-xl transition-all shadow-xs"
+          >
+            <ArrowLeft size={16} />
+            <span>Voltar ao Painel</span>
+          </button>
+          
+          {/* Botão de Tema */}
+          <button
+            onClick={toggleTheme}
+            type="button"
+            class="p-2.5 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-slate-600/50 rounded-xl transition-all shadow-xs"
+            title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+        </div>
+        
         <button
           onClick={() => window.print()}
           class="flex items-center space-x-2 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-5 py-2.5 rounded-xl text-sm font-extrabold shadow-lg shadow-primary-500/10 transition-all"

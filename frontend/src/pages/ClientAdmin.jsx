@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Save, UserPlus, Users, FileText, Trash2, Eye, Upload, Plus, BarChart3, TrendingUp, Award, Activity, DollarSign, Layers } from 'lucide-react';
+import { LogOut, Save, UserPlus, Users, FileText, Trash2, Eye, Upload, Plus, BarChart3, TrendingUp, Award, Activity, DollarSign, Layers, Sun, Moon } from 'lucide-react';
 import { getDrafts, deleteDraft } from '../utils/offlineDb';
 
-export default function ClientAdmin({ onLogout, onViewReport, onCreateReport }) {
+export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, theme, toggleTheme }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [company, setCompany] = useState({
     name: '', cnpj: '', logo_url: '',
@@ -370,32 +370,42 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport }) 
   const recentReports = [...reports].slice(0, 3);
 
   return (
-    <div class="min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col md:flex-row relative">
+    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans flex flex-col md:flex-row relative transition-colors duration-200">
       
       {/* Header Mobile */}
-      <header class="md:hidden bg-slate-800 border-b border-slate-700/60 px-5 py-4 flex items-center justify-between sticky top-0 z-40 w-full">
+      <header class="md:hidden bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/60 px-5 py-4 flex items-center justify-between sticky top-0 z-40 w-full transition-colors duration-200">
         <div class="flex items-center space-x-3">
           <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary-600 to-emerald-500 flex items-center justify-center font-extrabold text-white text-base">
             D
           </div>
           <div>
-            <h2 class="text-base font-bold leading-tight">AgroSkan</h2>
-            <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none">Painel Administrativo</p>
+            <h2 class="text-base font-bold leading-tight text-slate-900 dark:text-white">AgroSkan</h2>
+            <p class="text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider leading-none">Painel Administrativo</p>
           </div>
         </div>
-        <button 
-          onClick={() => setMenuOpen(!menuOpen)}
-          class="p-2 text-slate-400 hover:text-white focus:outline-none transition-colors"
-          aria-label="Abrir menu"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {menuOpen ? (
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </button>
+        <div class="flex items-center space-x-1">
+          <button
+            onClick={toggleTheme}
+            type="button"
+            class="p-2 text-slate-550 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors"
+            title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <button 
+            onClick={() => setMenuOpen(!menuOpen)}
+            class="p-2 text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-white focus:outline-none transition-colors"
+            aria-label="Abrir menu"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {menuOpen ? (
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+        </div>
       </header>
 
       {/* Overlay escuro de fundo no mobile */}
@@ -407,16 +417,16 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport }) 
       )}
 
       {/* Sidebar de Navegação */}
-      <aside class={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-800 border-r border-slate-700/60 flex flex-col transform transition-transform duration-300 md:relative md:translate-x-0 ${
+      <aside class={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700/60 flex flex-col transform transition-transform duration-300 md:relative md:translate-x-0 transition-colors duration-200 ${
         menuOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div class="p-6 border-b border-slate-700 flex items-center space-x-3">
+        <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center space-x-3">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600 to-emerald-500 flex items-center justify-center font-extrabold text-white text-lg">
             D
           </div>
           <div>
-            <h2 class="text-lg font-bold">AgroSkan</h2>
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Painel Administrativo</p>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white">AgroSkan</h2>
+            <p class="text-[10px] text-slate-550 dark:text-slate-400 font-bold uppercase tracking-wider">Painel Administrativo</p>
           </div>
         </div>
 
@@ -429,7 +439,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport }) 
             class={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
               activeTab === 'dashboard' 
                 ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/10' 
-                : 'text-slate-400 hover:bg-slate-700/40 hover:text-white'
+                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700/40 dark:hover:text-white'
             }`}
           >
             <BarChart3 size={18} />
@@ -443,7 +453,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport }) 
             class={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
               activeTab === 'settings' 
                 ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/10' 
-                : 'text-slate-400 hover:bg-slate-700/40 hover:text-white'
+                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700/40 dark:hover:text-white'
             }`}
           >
             <Save size={18} />
@@ -457,7 +467,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport }) 
             class={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
               activeTab === 'pilots' 
                 ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/10' 
-                : 'text-slate-400 hover:bg-slate-700/40 hover:text-white'
+                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700/40 dark:hover:text-white'
             }`}
           >
             <Users size={18} />
@@ -471,7 +481,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport }) 
             class={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
               activeTab === 'reports' 
                 ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/10' 
-                : 'text-slate-400 hover:bg-slate-700/40 hover:text-white'
+                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700/40 dark:hover:text-white'
             }`}
           >
             <FileText size={18} />
@@ -482,17 +492,27 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport }) 
               setMenuOpen(false);
               onCreateReport();
             }}
-            class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-400 hover:bg-slate-700/40 hover:text-white transition-all"
+            class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-700/40 dark:hover:text-white transition-all"
           >
             <Plus size={18} />
             <span>Elaborar Relatório</span>
           </button>
         </nav>
 
-        <div class="p-4 border-t border-slate-700">
+        <div class="p-4 border-t border-slate-200 dark:border-slate-700 space-y-2">
+          {/* Alternador de Tema */}
+          <button
+            onClick={toggleTheme}
+            type="button"
+            class="w-full flex items-center justify-center space-x-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600/50 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+          >
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            <span>{theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}</span>
+          </button>
+
           <button
             onClick={onLogout}
-            class="w-full flex items-center justify-center space-x-2 bg-slate-700/50 hover:bg-red-500/10 hover:text-red-200 border border-slate-600/50 hover:border-red-500/20 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+            class="w-full flex items-center justify-center space-x-2 bg-slate-100 hover:bg-red-500/10 hover:text-red-650 dark:bg-slate-700/50 dark:hover:bg-red-500/10 dark:hover:text-red-200 border border-slate-200 dark:border-slate-600/50 dark:hover:border-red-500/20 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
           >
             <LogOut size={16} />
             <span>Sair</span>

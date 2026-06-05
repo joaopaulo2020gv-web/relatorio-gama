@@ -30,6 +30,7 @@ export default function App() {
         
         if (response.ok && data.user) {
           setUser(data.user);
+          localStorage.setItem('gama_user', JSON.stringify(data.user));
         } else {
           // Token inválido ou expirado
           handleLogout();

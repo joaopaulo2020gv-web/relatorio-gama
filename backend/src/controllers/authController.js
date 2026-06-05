@@ -14,7 +14,7 @@ exports.login = (req, res) => {
 
   // Buscar usuário no banco junto com o limite de conexões do plano da empresa
   db.get(
-    `SELECT u.*, c.name as company_name, c.plan_status, c.logo_url, p.max_devices 
+    `SELECT u.*, c.name as company_name, c.cnpj, c.plan_status, c.logo_url, p.max_devices 
      FROM users u 
      LEFT JOIN companies c ON u.company_id = c.id 
      LEFT JOIN plans p ON c.plan_name = p.name
@@ -67,6 +67,7 @@ exports.login = (req, res) => {
             company_id: user.company_id,
             name: user.name,
             company_name: user.company_name,
+            cnpj: user.cnpj,
             logo_url: user.logo_url
           }
         });
@@ -135,6 +136,7 @@ exports.login = (req, res) => {
                     company_id: user.company_id,
                     name: user.name,
                     company_name: user.company_name,
+                    cnpj: user.cnpj,
                     logo_url: user.logo_url
                   }
                 });
@@ -152,7 +154,7 @@ exports.getCurrentUser = (req, res) => {
   const { id } = req.user;
 
   db.get(
-    `SELECT u.id, u.username, u.role, u.company_id, u.name, c.name as company_name, c.plan_status, c.logo_url 
+    `SELECT u.id, u.username, u.role, u.company_id, u.name, c.name as company_name, c.cnpj, c.plan_status, c.logo_url 
      FROM users u 
      LEFT JOIN companies c ON u.company_id = c.id 
      WHERE u.id = ?`,

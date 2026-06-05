@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Plus, FileText, Eye, Map, Trash2, Sun, Moon, Download } from 'lucide-react';
+import { LogOut, Plus, FileText, Eye, Map, Trash2, Sun, Moon, Download, Layers, TrendingUp, DollarSign, Search } from 'lucide-react';
 import { getDrafts, deleteDraft } from '../utils/offlineDb';
 import { triggerHaptic } from '../utils/haptic';
 
@@ -9,6 +9,8 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [hoveredIndex, setHoveredIndex] = useState(null);
   const user = JSON.parse(localStorage.getItem('gama_user') || '{}');
 
   const fetchPilotReports = async () => {
@@ -184,6 +186,29 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
     }
   };
 
+  // Estatísticas baseadas no histórico de relatórios do piloto
+  const totalHectares = reports.reduce((sum, r) => sum + (parseFloat(r.total_area) || 0), 0);
+  const totalReportsCount = reports.length;
+  const totalEarnings = reports.reduce((sum, r) => sum + (parseFloat(r.total_price) || 0), 0);
+
+  // Agrupamento de Culturas para o Gráfico Donut
+  const cultureDataMap = {};
+  reports.forEach(r => {
+    const cult = (r.culture || 'Não Informada').toUpperCase().trim();
+    cultureDataMap[cult] = (cultureDataMap[cult] || 0) + (parseFloat(r.total_area) || 0);
+  });
+  const pilotCultureMix = Object.keys(cultureDataMap).map(name => ({
+    name,
+    area: cultureDataMap[name]
+  })).sort((a, b) => b.area - a.area);
+
+  // Filtragem dos relatórios pelo campo de pesquisa
+  const filteredReports = reports.filter(r => 
+    (r.client_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.farm_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.culture || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200">
       {/* Top Header */}
@@ -277,6 +302,149 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
           </button>
         </section>
 
+        {/* Dashboard de Estatísticas e Gráficos Pessoais */}
+        {reports.length > 0 && (
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+            {/* Mini-Cards de KPI */}
+            <div class="lg:col-span-1 flex flex-col gap-4 justify-between">
+              {/* Card Hectares */}
+              <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-5 rounded-2xl flex items-center space-x-4 shadow-xs dark:shadow-none transition-colors duration-200">
+                <div class="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center">
+                  <TrendingUp size={20} />
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Área Pulverizada</span>
+                  <div class="text-xl font-black text-slate-900 dark:text-white mt-0.5">
+                    {totalHectares.toFixed(1).replace('.', ',')} ha
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Relatórios */}
+              <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-5 rounded-2xl flex items-center space-x-4 shadow-xs dark:shadow-none transition-colors duration-200">
+                <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Relatórios Emitidos</span>
+                  <div class="text-xl font-black text-slate-900 dark:text-white mt-0.5">
+                    {totalReportsCount} un
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Faturamento */}
+              <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-5 rounded-2xl flex items-center space-x-4 shadow-xs dark:shadow-none transition-colors duration-200">
+                <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <DollarSign size={20} />
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Faturamento Gerado</span>
+                  <div class="text-xl font-black text-slate-900 dark:text-white mt-0.5">
+                    {totalEarnings.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Donut Chart de Culturas (Mix) */}
+            <div class="lg:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-5 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs dark:shadow-none transition-colors duration-200">
+              <div class="flex-1 w-full flex flex-col justify-between h-full">
+                <div>
+                  <h4 class="text-sm font-bold text-slate-800 dark:text-white flex items-center space-x-2 border-b border-slate-100 dark:border-slate-700/40 pb-2">
+                    <Layers size={15} class="text-primary-500" />
+                    <span>Mix de Culturas Atendidas</span>
+                  </h4>
+                  <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 font-semibold">Proporção por área aplicada (hectares)</p>
+                </div>
+
+                {/* Legendas coloridas */}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 max-h-[120px] overflow-y-auto pr-1 no-scrollbar text-xs font-semibold text-slate-700 dark:text-slate-305">
+                  {pilotCultureMix.map((item, idx) => {
+                    const percent = totalHectares > 0 ? (item.area / totalHectares) * 100 : 0;
+                    const color = `hsl(${(idx * 137.5) % 360}, 70%, 50%)`;
+                    return (
+                      <div 
+                        key={idx} 
+                        onMouseEnter={() => setHoveredIndex(idx)}
+                        onMouseLeave={() => setHoveredIndex(null)}
+                        class={`flex items-center justify-between p-1.5 rounded-lg transition-colors cursor-pointer ${
+                          hoveredIndex === idx ? 'bg-slate-100 dark:bg-slate-700/30' : ''
+                        }`}
+                      >
+                        <div class="flex items-center space-x-2 truncate">
+                          <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }}></span>
+                          <span class="truncate">{item.name}</span>
+                        </div>
+                        <span class="text-slate-500 dark:text-slate-400 text-[10px] ml-1">{percent.toFixed(0)}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Gráfico Donut SVG */}
+              <div class="relative flex items-center justify-center w-36 h-36 flex-shrink-0">
+                <svg width="140" height="140" viewBox="0 0 120 120" class="transform -rotate-90">
+                  <circle cx="60" cy="60" r="50" fill="transparent" stroke="rgba(128,128,128,0.08)" stroke-width="12" />
+                  {(() => {
+                    let accumulatedPercent = 0;
+                    const donutData = pilotCultureMix.map((item, idx) => {
+                      const percent = totalHectares > 0 ? (item.area / totalHectares) * 100 : 0;
+                      const strokeLength = (percent / 100) * 314.16;
+                      const strokeOffset = 314.16 - ((accumulatedPercent / 100) * 314.16);
+                      accumulatedPercent += percent;
+                      const color = `hsl(${(idx * 137.5) % 360}, 70%, 50%)`;
+                      return { ...item, percent, strokeLength, strokeOffset, color };
+                    });
+
+                    return donutData.map((item, idx) => (
+                      <circle
+                        key={idx}
+                        cx="60"
+                        cy="60"
+                        r="50"
+                        fill="transparent"
+                        stroke={item.color}
+                        stroke-width={hoveredIndex === idx ? 16 : 12}
+                        stroke-dasharray={`${item.strokeLength} 314.16`}
+                        stroke-dashoffset={item.strokeOffset}
+                        stroke-linecap="round"
+                        class="transition-all duration-300 cursor-pointer origin-center hover:scale-[1.03]"
+                        onMouseEnter={() => setHoveredIndex(idx)}
+                        onMouseLeave={() => setHoveredIndex(null)}
+                      />
+                    ));
+                  })()}
+                </svg>
+                <div class="absolute text-center flex flex-col justify-center items-center pointer-events-none w-24 overflow-hidden">
+                  {hoveredIndex !== null ? (
+                    <>
+                      <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider truncate w-full">
+                        {pilotCultureMix[hoveredIndex]?.name}
+                      </span>
+                      <span class="text-sm font-black text-slate-800 dark:text-white">
+                        {pilotCultureMix[hoveredIndex]?.area.toFixed(1).replace('.', ',')} ha
+                      </span>
+                      <span class="text-[9px] text-slate-400 font-semibold">
+                        {(((pilotCultureMix[hoveredIndex]?.area || 0) / (totalHectares || 1)) * 100).toFixed(0)}%
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Total</span>
+                      <span class="text-sm font-black text-slate-800 dark:text-white">
+                        {totalHectares.toFixed(1).replace('.', ',')} ha
+                      </span>
+                      <span class="text-[9px] text-slate-505 font-semibold">{pilotCultureMix.length} Culturas</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Rascunhos Offline Detalhados */}
         {offlineDrafts.length > 0 && (
           <section class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 rounded-2xl overflow-hidden shadow-xs dark:shadow-none">
@@ -294,7 +462,7 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
               </button>
             </div>
             
-            <div class="overflow-x-auto">
+            <div class="hidden md:block overflow-x-auto">
               <table class="w-full text-left border-collapse">
                 <thead>
                   <tr class="bg-slate-50/70 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase border-b border-slate-200 dark:border-slate-700">
@@ -321,7 +489,7 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
                         <div class="flex items-center justify-center space-x-2">
                           <button
                             onClick={() => { triggerHaptic(12); onCreateReport(draft); }}
-                            class="px-3 py-1.5 text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-slate-950 rounded-lg transition-all border border-amber-500/25 animate-pulse"
+                            class="px-3 py-1.5 text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-slate-950 rounded-lg transition-all border border-amber-500/25"
                             title="Editar rascunho local"
                           >
                             Editar Rascunho
@@ -346,77 +514,183 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
                 </tbody>
               </table>
             </div>
+
+            {/* Cards para Mobile */}
+            <div class="grid grid-cols-1 gap-4 p-4 md:hidden">
+              {offlineDrafts.map(draft => (
+                <div key={draft.id} class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/40 p-4 rounded-2xl space-y-3">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <div class="font-extrabold text-sm text-slate-900 dark:text-white">{draft.client_name || 'Sem nome'}</div>
+                      <div class="text-xs text-slate-500 dark:text-slate-400 font-bold">{draft.farm_name || 'Sem fazenda'}</div>
+                    </div>
+                    <span class="px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg text-[10px] font-black uppercase">Rascunho</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2 text-xs border-t border-b border-slate-200 dark:border-slate-700/30 py-2">
+                    <div>
+                      <span class="text-slate-400 block text-[9px] font-bold uppercase">Cultura</span>
+                      <span class="font-bold text-slate-800 dark:text-slate-200">{draft.culture || 'Não informada'}</span>
+                    </div>
+                    <div>
+                      <span class="text-slate-400 block text-[9px] font-bold uppercase">Salvo em</span>
+                      <span class="font-medium text-slate-805 dark:text-slate-200">{draft.savedAt ? new Date(draft.savedAt).toLocaleDateString('pt-BR') : '-'}</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between pt-1">
+                    <button
+                      onClick={() => { triggerHaptic(12); onCreateReport(draft); }}
+                      class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 rounded-xl text-xs text-center transition-all mr-2"
+                    >
+                      Editar Rascunho
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (window.confirm('Excluir este rascunho localmente?')) {
+                          triggerHaptic(15);
+                          await deleteDraft(draft.id);
+                          fetchOfflineDrafts();
+                        }
+                      }}
+                      class="p-2 text-slate-400 hover:text-red-500 rounded-xl hover:bg-red-500/10 border border-slate-200 dark:border-slate-700/40 transition-all"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </section>
         )}
 
         {/* Histórico do Piloto */}
         <section class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 rounded-2xl overflow-hidden shadow-xs dark:shadow-none">
-          <div class="px-6 py-5 border-b border-slate-200 dark:border-slate-700">
+          <div class="px-6 py-5 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <h4 class="text-lg font-bold text-slate-900 dark:text-white">Meus Relatórios Emitidos</h4>
+            <div class="relative w-full sm:w-64">
+              <input
+                type="text"
+                placeholder="Buscar cliente, fazenda..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-primary-500 transition-all"
+              />
+              <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
+                <Search size={14} />
+              </div>
+            </div>
           </div>
 
           {loading ? (
             <div class="p-12 text-center text-slate-500 dark:text-slate-400">Carregando seus relatórios...</div>
-          ) : reports.length === 0 ? (
+          ) : filteredReports.length === 0 ? (
             <div class="p-16 text-center space-y-4">
               <div class="w-16 h-16 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto text-slate-400 dark:text-slate-500">
                 <FileText size={28} />
               </div>
               <div class="text-slate-500 dark:text-slate-400 font-medium max-w-sm mx-auto">
-                Você ainda não possui relatórios gravados. Clique em "Novo Relatório" para iniciar seu primeiro relatório.
+                {searchTerm ? 'Nenhum relatório corresponde à sua busca.' : 'Você ainda não possui relatórios gravados. Clique em "Novo Relatório" para iniciar seu primeiro relatório.'}
               </div>
             </div>
           ) : (
-            <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse">
-                <thead>
-                  <tr class="bg-slate-50/70 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase border-b border-slate-200 dark:border-slate-700">
-                    <th class="px-6 py-4">Cliente / Fazenda</th>
-                    <th class="px-6 py-4">Data Aplicação</th>
-                    <th class="px-6 py-4">Área Total</th>
-                    <th class="px-6 py-4">Valor Total</th>
-                    <th class="px-6 py-4 text-center">Ações</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200 dark:divide-slate-700/40">
-                  {reports.map(r => (
-                    <tr key={r.id} class="hover:bg-slate-50 dark:hover:bg-slate-700/10 transition-colors">
-                      <td class="px-6 py-4">
-                        <div class="font-bold text-slate-900 dark:text-white">{r.client_name}</div>
-                        <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">{r.farm_name}</div>
-                      </td>
-                      <td class="px-6 py-4 text-sm font-semibold text-slate-750 dark:text-slate-300">
-                        {new Date(r.report_date).toLocaleDateString('pt-BR')}
-                      </td>
-                      <td class="px-6 py-4 text-sm font-bold text-slate-750 dark:text-slate-300">
-                        {r.total_area} ha
-                      </td>
-                      <td class="px-6 py-4 text-sm font-black text-emerald-600 dark:text-emerald-400">
-                        {r.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      </td>
-                      <td class="px-6 py-4 text-center">
-                        <div class="flex items-center justify-center space-x-2">
-                          <button
-                            onClick={() => { triggerHaptic(10); onViewReport(r.id); }}
-                            class="p-2 text-primary-600 dark:text-primary-400 hover:text-white bg-slate-50 hover:bg-primary-600 border border-slate-200 dark:border-slate-700/60 hover:border-primary-500 rounded-lg transition-all"
-                            title="Ver Relatório / Exportar PDF"
-                          >
-                            <Eye size={15} />
-                          </button>
-                          <button
-                            onClick={() => { triggerHaptic(15); handleDeleteReport(r.id); }}
-                            class="p-2 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 bg-slate-50 hover:bg-red-500/10 dark:bg-slate-950/20 dark:hover:bg-red-500/10 border border-slate-200 dark:border-slate-700/60 dark:hover:border-red-500/20 rounded-lg transition-all"
-                            title="Excluir"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
+            <>
+              {/* Tabela para Desktop */}
+              <div class="hidden md:block overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50/70 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase border-b border-slate-200 dark:border-slate-700">
+                      <th class="px-6 py-4">Cliente / Fazenda</th>
+                      <th class="px-6 py-4">Data Aplicação</th>
+                      <th class="px-6 py-4">Área Total</th>
+                      <th class="px-6 py-4">Valor Total</th>
+                      <th class="px-6 py-4 text-center">Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200 dark:divide-slate-700/40">
+                    {filteredReports.map(r => (
+                      <tr key={r.id} class="hover:bg-slate-50 dark:hover:bg-slate-700/10 transition-colors">
+                        <td class="px-6 py-4">
+                          <div class="font-bold text-slate-900 dark:text-white">{r.client_name}</div>
+                          <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">{r.farm_name}</div>
+                        </td>
+                        <td class="px-6 py-4 text-sm font-semibold text-slate-750 dark:text-slate-300">
+                          {new Date(r.report_date).toLocaleDateString('pt-BR')}
+                        </td>
+                        <td class="px-6 py-4 text-sm font-bold text-slate-750 dark:text-slate-300">
+                          {r.total_area} ha
+                        </td>
+                        <td class="px-6 py-4 text-sm font-black text-emerald-600 dark:text-emerald-400">
+                          {r.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                          <div class="flex items-center justify-center space-x-2">
+                            <button
+                              onClick={() => { triggerHaptic(10); onViewReport(r.id); }}
+                              class="p-2 text-primary-600 dark:text-primary-400 hover:text-white bg-slate-50 hover:bg-primary-600 border border-slate-200 dark:border-slate-700/60 hover:border-primary-500 rounded-lg transition-all"
+                              title="Ver Relatório / Exportar PDF"
+                            >
+                              <Eye size={15} />
+                            </button>
+                            <button
+                              onClick={() => { triggerHaptic(15); handleDeleteReport(r.id); }}
+                              class="p-2 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 bg-slate-50 hover:bg-red-500/10 dark:bg-slate-950/20 dark:hover:bg-red-500/10 border border-slate-200 dark:border-slate-700/60 dark:hover:border-red-500/20 rounded-lg transition-all"
+                              title="Excluir"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Cards para Mobile */}
+              <div class="grid grid-cols-1 gap-4 p-4 md:hidden">
+                {filteredReports.map(r => (
+                  <div key={r.id} class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/40 p-4 rounded-2xl space-y-3">
+                    <div class="flex justify-between items-start">
+                      <div>
+                        <div class="font-extrabold text-sm text-slate-900 dark:text-white">{r.client_name}</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 font-bold">{r.farm_name}</div>
+                      </div>
+                      <span class="px-2.5 py-1 bg-primary-600/10 text-primary-500 dark:text-primary-400 rounded-lg text-[10px] font-black uppercase">Emitido</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-xs border-t border-b border-slate-200 dark:border-slate-700/30 py-2">
+                      <div>
+                        <span class="text-slate-400 block text-[9px] font-bold uppercase">Data</span>
+                        <span class="font-bold text-slate-800 dark:text-slate-200">{new Date(r.report_date).toLocaleDateString('pt-BR')}</span>
+                      </div>
+                      <div>
+                        <span class="text-slate-400 block text-[9px] font-bold uppercase">Área</span>
+                        <span class="font-bold text-slate-800 dark:text-slate-200">{r.total_area} ha</span>
+                      </div>
+                      <div>
+                        <span class="text-slate-400 block text-[9px] font-bold uppercase">Faturamento</span>
+                        <span class="font-black text-emerald-600 dark:text-emerald-400">
+                          {r.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                      <button
+                        onClick={() => { triggerHaptic(10); onViewReport(r.id); }}
+                        class="flex-1 bg-primary-600 hover:bg-primary-500 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all mr-2"
+                      >
+                        <Eye size={14} />
+                        <span>Visualizar / PDF</span>
+                      </button>
+                      <button
+                        onClick={() => { triggerHaptic(15); handleDeleteReport(r.id); }}
+                        class="p-2.5 text-slate-400 hover:text-red-500 rounded-xl hover:bg-red-500/10 border border-slate-200 dark:border-slate-700/40 transition-all"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </section>
       </main>

@@ -853,6 +853,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
                 <input
                   ref={clientDocumentRef}
                   type="text"
+                  inputmode="numeric"
                   value={clientDocument}
                   onChange={(e) => setClientDocument(formatCPFOrCNPJ(e.target.value))}
                   onKeyDown={(e) => handleKeyDownNext(e, farmAddressRef)}
@@ -984,6 +985,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
                         <input
                           type="number"
                           step="0.1"
+                          inputmode="decimal"
                           value={flight.area}
                           onChange={(e) => updateFlightField(idx, 'area', parseFloat(e.target.value) || 0)}
                           class="w-16 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white font-bold"
@@ -992,6 +994,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
                       <td class="py-3 px-2">
                         <input
                           type="text"
+                          inputmode="decimal"
                           value={flight.height}
                           onChange={(e) => updateFlightField(idx, 'height', e.target.value)}
                           class="w-24 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"
@@ -1000,6 +1003,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
                       <td class="py-3 px-2">
                         <input
                           type="text"
+                          inputmode="decimal"
                           value={flight.width}
                           onChange={(e) => updateFlightField(idx, 'width', e.target.value)}
                           class="w-16 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"
@@ -1008,6 +1012,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
                       <td class="py-3 px-2">
                         <input
                           type="text"
+                          inputmode="decimal"
                           value={flight.speed}
                           onChange={(e) => updateFlightField(idx, 'speed', e.target.value)}
                           class="w-20 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"
@@ -1387,6 +1392,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
                 <label class="block text-slate-300 text-xs font-bold mb-1.5">Valor do Hectare (R$/ha)</label>
                 <input
                   type="number"
+                  inputmode="decimal"
                   value={pricePerHa}
                   onChange={(e) => setPricePerHa(parseFloat(e.target.value) || 0)}
                   class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-bold text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500/50"

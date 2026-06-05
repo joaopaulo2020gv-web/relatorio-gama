@@ -178,10 +178,26 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
   const recalcCaldaTotal = (calda) => {
     let totalLiters = 0;
     calda.ingredients.forEach(ing => {
-      const dosageStr = (ing.dosage || '').replace(',', '.');
-      const match = dosageStr.match(/([\d.]+)\s*L\/ha/i);
-      if (match) {
-        totalLiters += parseFloat(match[1]) || 0;
+      const dosageStr = (ing.dosage || '').trim().replace(',', '.');
+      if (!dosageStr) return;
+
+      // 1. Verificar se é sólido (gramas, kg, etc.) e ignorar na soma de volume líquido
+      const isSolid = /g(r)?\/ha|g(r)?\b|gramas?|kg/i.test(dosageStr);
+      if (isSolid) return;
+
+      // 2. Verificar se está em ml e converter para litros (dividido por 1000)
+      const mlMatch = dosageStr.match(/([\d.]+)\s*m[lL]/);
+      if (mlMatch) {
+        const value = parseFloat(mlMatch[1]) || 0;
+        totalLiters += value / 1000;
+        return;
+      }
+
+      // 3. Extrair qualquer número puro e tratar como litros
+      const numMatch = dosageStr.match(/([\d.]+)/);
+      if (numMatch) {
+        const value = parseFloat(numMatch[1]) || 0;
+        totalLiters += value;
       }
     });
     return `${totalLiters.toFixed(2).replace('.', ',')} L/ha`;

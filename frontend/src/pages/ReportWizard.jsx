@@ -36,18 +36,13 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
       day: 'DIA 1',
       location: 'Geral',
       ingredients: [
-        { product: 'ÁGUA', dosage: '7,43 L/ha' },
-        { product: 'Dominux XT', dosage: '2,50 L/ha' },
-        { product: 'ZARTAN', dosage: '20 gr/ha' },
-        { product: 'Óleo Mineral', dosage: '0,05 L/ha' },
-        { product: 'P51', dosage: '0,01 L/ha' },
-        { product: 'AD+', dosage: '0,01 L/ha' }
+        { product: '', dosage: '' }
       ],
-      total: '10 L/ha'
+      total: '0 L/ha'
     }
   ]);
   const [phPhotoUrl, setPhPhotoUrl] = useState('');
-  const [phDesc, setPhDesc] = useState('Sem problemas com a calda. pH após o uso do P51 (redutor de pH).');
+  const [phDesc, setPhDesc] = useState('');
 
   // Passo 5: Mapas
   const [maps, setMaps] = useState([]); // Array de { photo_url, description }

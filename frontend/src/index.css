@@ -171,7 +171,6 @@ html:not(.dark) {
   .text-slate-50 {
     color: #1e293b !important; /* slate-800 */
   }
-
   .text-slate-400,
   .text-slate-450 {
     color: #64748b !important; /* slate-500 */

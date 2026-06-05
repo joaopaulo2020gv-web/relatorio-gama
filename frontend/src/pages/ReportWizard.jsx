@@ -461,7 +461,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
       {/* Main Wizard Form */}
       <main class="max-w-4xl mx-auto p-6 mt-6 bg-slate-800 border border-slate-700/40 rounded-3xl shadow-xl">
         {error && (
-          <div class="bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl text-sm mb-6">
+          <div class="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-200 px-4 py-3 rounded-xl text-sm mb-6">
             {error}
           </div>
         )}
@@ -662,7 +662,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
                           type="button"
                           disabled={flights.length === 1}
                           onClick={() => removeFlightRow(idx)}
-                          class="p-1.5 text-slate-500 hover:text-red-400 disabled:opacity-30"
+                          class="p-1.5 text-slate-500 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-30"
                         >
                           <Trash2 size={15} />
                         </button>
@@ -743,15 +743,15 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
                 
                 {/* Safe / Danger zones baseadas no Delta T (ideal de 2 a 8) */}
                 {deltaT >= 2 && deltaT <= 8 ? (
-                  <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-lg text-xs font-bold">
+                  <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-lg text-xs font-bold">
                     Condições Ideais para Aplicação
                   </div>
                 ) : deltaT > 8 && deltaT <= 10 ? (
-                  <div class="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-3 py-1.5 rounded-lg text-xs font-bold">
+                  <div class="bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-lg text-xs font-bold">
                     Condições Marginais (Evaporação rápida)
                   </div>
                 ) : (
-                  <div class="bg-red-500/10 border border-red-500/20 text-red-400 px-3 py-1.5 rounded-lg text-xs font-bold">
+                  <div class="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 px-3 py-1.5 rounded-lg text-xs font-bold">
                     Inadequado para Aplicação (Alto risco)
                   </div>
                 )}
@@ -799,7 +799,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
                     type="button"
                     disabled={caldas.length === 1}
                     onClick={() => removeCalda(cIdx)}
-                    class="absolute top-4 right-4 text-slate-500 hover:text-red-400 disabled:opacity-30"
+                    class="absolute top-4 right-4 text-slate-500 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-30"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -852,7 +852,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
                           type="button"
                           disabled={calda.ingredients.length === 1}
                           onClick={() => removeIngredient(cIdx, iIdx)}
-                          class="text-slate-500 hover:text-red-400 p-1"
+                          class="text-slate-500 hover:text-red-600 dark:hover:text-red-400 p-1"
                         >
                           ✕
                         </button>
@@ -955,7 +955,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
                     <button
                       type="button"
                       onClick={() => removeMap(idx)}
-                      class="absolute top-4 right-4 text-slate-500 hover:text-red-400"
+                      class="absolute top-4 right-4 text-slate-500 hover:text-red-600 dark:hover:text-red-400"
                     >
                       <Trash2 size={16} />
                     </button>

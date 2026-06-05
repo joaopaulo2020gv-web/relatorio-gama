@@ -68,7 +68,7 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
         </div>
 
         {error && (
-          <div class="bg-red-500/10 border border-red-500/20 text-red-650 dark:text-red-200 px-4 py-3 rounded-xl text-sm mb-6 flex items-start space-x-2">
+          <div class="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-200 px-4 py-3 rounded-xl text-sm mb-6 flex items-start space-x-2">
             <span class="font-semibold">Erro:</span>
             <span>{error}</span>
           </div>

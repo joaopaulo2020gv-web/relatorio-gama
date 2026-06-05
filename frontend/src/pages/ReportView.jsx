@@ -30,7 +30,7 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
   }
 
   if (!report) {
-    return <div class="text-center py-12 text-red-400 no-print">Relatório não encontrado.</div>;
+    return <div class="text-center py-12 text-red-600 dark:text-red-400 no-print">Relatório não encontrado.</div>;
   }
 
   const printYear = new Date(report.report_date).getFullYear();

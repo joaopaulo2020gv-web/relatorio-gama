@@ -398,7 +398,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme }) {
           </button>
           <button 
             onClick={onLogout}
-            class="flex items-center space-x-2 bg-slate-100 hover:bg-red-500/10 hover:text-red-650 dark:bg-slate-700/50 dark:hover:bg-red-500/10 dark:hover:text-red-200 border border-slate-200 dark:border-slate-600/50 dark:hover:border-red-500/20 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+            class="flex items-center space-x-2 bg-slate-100 hover:bg-red-500/10 hover:text-red-600 dark:bg-slate-700/50 dark:hover:bg-red-500/10 dark:hover:text-red-200 border border-slate-200 dark:border-slate-600/50 dark:hover:border-red-500/20 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
           >
             <LogOut size={16} />
             <span>Sair</span>
@@ -537,8 +537,8 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme }) {
                         <td class="px-6 py-4 text-center">
                           <span class={`inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-bold ${
                             company.plan_status === 'active' 
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                              : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
                           }`}>
                             {company.plan_status === 'active' ? 'Ativo' : 'Suspenso'}
                           </span>
@@ -557,8 +557,8 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme }) {
                               title={company.plan_status === 'active' ? 'Suspender assinatura' : 'Ativar assinatura'}
                               class={`p-2 rounded-xl border transition-all duration-200 ${
                                 company.plan_status === 'active' 
-                                  ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20' 
-                                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
+                                  ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20 hover:bg-red-500/20' 
+                                  : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
                               }`}
                             >
                               {company.plan_status === 'active' ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
@@ -566,7 +566,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme }) {
                             <button
                               onClick={() => handleDeleteCompany(company.id)}
                               title="Remover Empresa"
-                              class="p-2 bg-slate-700/50 hover:bg-red-500/10 hover:text-red-400 border border-slate-600/50 hover:border-red-500/20 text-slate-300 rounded-xl transition-all duration-200"
+                              class="p-2 bg-slate-700/50 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 border border-slate-600/50 hover:border-red-500/20 text-slate-300 rounded-xl transition-all duration-200"
                             >
                               <Trash2 size={18} />
                             </button>
@@ -632,7 +632,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme }) {
                             <button
                               onClick={() => handleDeletePlan(plan.id)}
                               title="Remover Plano"
-                              class="p-2 bg-slate-700/50 hover:bg-red-500/10 hover:text-red-400 border border-slate-600/50 hover:border-red-500/20 text-slate-300 rounded-xl transition-all duration-200"
+                              class="p-2 bg-slate-700/50 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 border border-slate-600/50 hover:border-red-500/20 text-slate-300 rounded-xl transition-all duration-200"
                             >
                               <Trash2 size={18} />
                             </button>
@@ -655,7 +655,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme }) {
             
             <form onSubmit={handleUpdateProfile} class="p-6 space-y-6">
               {profileError && (
-                <div class="bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl text-sm">
+                <div class="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-200 px-4 py-3 rounded-xl text-sm">
                   {profileError}
                 </div>
               )}
@@ -743,7 +743,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme }) {
             </div>
 
             {formError && (
-              <div class="bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl text-sm mb-6">
+              <div class="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-200 px-4 py-3 rounded-xl text-sm mb-6">
                 {formError}
               </div>
             )}
@@ -885,7 +885,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme }) {
             </div>
 
             {planFormError && (
-              <div class="bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl text-sm mb-6">
+              <div class="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-200 px-4 py-3 rounded-xl text-sm mb-6">
                 {planFormError}
               </div>
             )}

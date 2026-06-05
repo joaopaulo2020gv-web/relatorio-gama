@@ -69,19 +69,20 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.7) =
 
 const SignaturePad = ({ label, value, onChange }) => {
   const canvasRef = React.useRef(null);
+  const fullCanvasRef = React.useRef(null);
   const [isDrawing, setIsDrawing] = React.useState(false);
+  const [showFullModal, setShowFullModal] = React.useState(false);
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    ctx.strokeStyle = '#000000'; // Cor da tinta preta
+    ctx.strokeStyle = '#000000';
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // Se houver um valor inicial (imagem base64), renderiza
     if (value) {
       const img = new Image();
       img.src = value;
@@ -89,92 +90,210 @@ const SignaturePad = ({ label, value, onChange }) => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       };
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
-  }, [value]);
+  }, [value, showFullModal]);
 
-  const getPos = (e) => {
-    const canvas = canvasRef.current;
+  React.useEffect(() => {
+    if (showFullModal) {
+      const timer = setTimeout(() => {
+        const canvas = fullCanvasRef.current;
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * window.devicePixelRatio;
+        canvas.height = rect.height * window.devicePixelRatio;
+
+        const ctx = canvas.getContext('2d');
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        if (value) {
+          const img = new Image();
+          img.src = value;
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, rect.width, rect.height);
+          };
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [showFullModal, value]);
+
+  const getPos = (e, canvasElement) => {
+    const canvas = canvasElement || canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    
-    // Suporte para mouse e touch
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    
-    // Ajustar escala
-    const x = ((clientX - rect.left) / rect.width) * canvas.width;
-    const y = ((clientY - rect.top) / rect.height) * canvas.height;
+    const x = ((clientX - rect.left) / rect.width) * (canvas.width / (canvasElement ? window.devicePixelRatio : 1));
+    const y = ((clientY - rect.top) / rect.height) * (canvas.height / (canvasElement ? window.devicePixelRatio : 1));
     return { x, y };
   };
 
-  const startDrawing = (e) => {
+  const startDrawing = (e, canvasElement) => {
     e.preventDefault();
-    const canvas = canvasRef.current;
+    const canvas = canvasElement || canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const pos = getPos(e);
+    const pos = getPos(e, canvasElement);
     ctx.beginPath();
     ctx.moveTo(pos.x, pos.y);
     setIsDrawing(true);
     triggerHaptic(5);
   };
 
-  const draw = (e) => {
+  const draw = (e, canvasElement) => {
     if (!isDrawing) return;
     e.preventDefault();
-    const canvas = canvasRef.current;
+    const canvas = canvasElement || canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const pos = getPos(e);
+    const pos = getPos(e, canvasElement);
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (canvasElement) => {
     if (!isDrawing) return;
     setIsDrawing(false);
-    const canvas = canvasRef.current;
-    if (canvas) {
-      onChange(canvas.toDataURL());
+    if (!canvasElement) {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        onChange(canvas.toDataURL());
+      }
     }
   };
 
-  const clearCanvas = () => {
-    const canvas = canvasRef.current;
+  const clearCanvas = (canvasElement) => {
+    const canvas = canvasElement || canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    onChange(null);
+    if (canvasElement) {
+      ctx.clearRect(0, 0, canvas.width / window.devicePixelRatio, canvas.height / window.devicePixelRatio);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      onChange(null);
+    }
     triggerHaptic(10);
+  };
+
+  const handleConfirmSignature = () => {
+    const canvas = fullCanvasRef.current;
+    if (canvas) {
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = 400;
+      tempCanvas.height = 150;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(canvas, 0, 0, 400, 150);
+      onChange(tempCanvas.toDataURL());
+    }
+    setShowFullModal(false);
+    triggerHaptic(15);
   };
 
   return (
     <div className="flex flex-col space-y-2">
       <div className="flex justify-between items-center">
-        <span className="text-slate-350 text-xs font-bold">{label}</span>
-        <button
-          type="button"
-          onClick={clearCanvas}
-          className="text-[11px] text-red-400 hover:text-red-350 font-black uppercase tracking-wider"
-        >
-          Limpar
-        </button>
+        <span className="text-slate-355 text-xs font-bold">{label}</span>
+        <div className="flex items-center space-x-3">
+          <button
+            type="button"
+            onClick={() => { triggerHaptic(10); setShowFullModal(true); }}
+            className="text-[11px] text-primary-400 hover:text-primary-350 font-black uppercase tracking-wider"
+          >
+            Tela Cheia
+          </button>
+          <button
+            type="button"
+            onClick={() => clearCanvas(null)}
+            className="text-[11px] text-red-400 hover:text-red-350 font-black uppercase tracking-wider"
+          >
+            Limpar
+          </button>
+        </div>
       </div>
-      <div className="border border-slate-700 bg-white rounded-2xl overflow-hidden shadow-inner">
+      <div className="border border-slate-700 bg-white rounded-2xl overflow-hidden shadow-inner relative">
         <canvas
           ref={canvasRef}
           width={400}
           height={150}
           className="w-full h-[150px] cursor-crosshair block touch-none"
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-          onTouchStart={startDrawing}
-          onTouchMove={draw}
-          onTouchEnd={stopDrawing}
+          onMouseDown={(e) => startDrawing(e, null)}
+          onMouseMove={(e) => draw(e, null)}
+          onMouseUp={() => stopDrawing(null)}
+          onMouseLeave={() => stopDrawing(null)}
+          onTouchStart={(e) => startDrawing(e, null)}
+          onTouchMove={(e) => draw(e, null)}
+          onTouchEnd={() => stopDrawing(null)}
+        />
+        <div 
+          onClick={() => { triggerHaptic(10); setShowFullModal(true); }}
+          className="absolute inset-0 bg-transparent cursor-pointer md:hidden"
+          title="Toque para assinar em tela cheia"
         />
       </div>
+
+      {showFullModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/98 flex flex-col p-4 select-none touch-none no-print">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase">{label}</h3>
+              <p className="text-[10px] text-slate-500 font-semibold mt-0.5 font-sans">Assine usando o seu dedo na tela.</p>
+            </div>
+            <div className="text-right hidden sm:block">
+              <span className="text-[9px] text-amber-500 font-black uppercase tracking-wider animate-pulse">💡 Dica: Gire o celular de lado (horizontal)</span>
+            </div>
+          </div>
+
+          <div className="flex-1 my-4 bg-white rounded-2xl overflow-hidden relative border border-slate-800 flex">
+            <canvas
+              ref={fullCanvasRef}
+              className="w-full h-full cursor-crosshair block touch-none bg-white"
+              onMouseDown={(e) => startDrawing(e, fullCanvasRef.current)}
+              onMouseMove={(e) => draw(e, fullCanvasRef.current)}
+              onMouseUp={() => stopDrawing(fullCanvasRef.current)}
+              onMouseLeave={() => stopDrawing(fullCanvasRef.current)}
+              onTouchStart={(e) => startDrawing(e, fullCanvasRef.current)}
+              onTouchMove={(e) => draw(e, fullCanvasRef.current)}
+              onTouchEnd={() => stopDrawing(fullCanvasRef.current)}
+            />
+            <div className="absolute top-2 right-2 px-2.5 py-1 bg-black/60 rounded-lg text-[9px] text-slate-350 font-bold block sm:hidden pointer-events-none">
+              Gire de lado 📱 ➔ ⎓
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <button
+              type="button"
+              onClick={() => setShowFullModal(false)}
+              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-all active:scale-95"
+            >
+              Cancelar
+            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => clearCanvas(fullCanvasRef.current)}
+                className="px-5 py-2.5 bg-red-950/30 hover:bg-red-950/50 text-red-400 font-bold rounded-xl text-xs border border-red-500/20 transition-all active:scale-95"
+              >
+                Limpar Tela
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSignature}
+                className="px-6 py-2.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white font-extrabold rounded-xl text-xs transition-all active:scale-95 shadow-lg shadow-primary-500/10"
+              >
+                Confirmar Assinatura
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

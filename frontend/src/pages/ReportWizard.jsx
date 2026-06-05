@@ -301,6 +301,45 @@ const SignaturePad = ({ label, value, onChange }) => {
 export default function ReportWizard({ initialData, onCancel, onSaveSuccess, theme, toggleTheme }) {
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
+
+  const clientNameRef = React.useRef(null);
+  const clientEmailRef = React.useRef(null);
+  const clientDocumentRef = React.useRef(null);
+  const farmAddressRef = React.useRef(null);
+  const farmNameRef = React.useRef(null);
+  const cultureRef = React.useRef(null);
+
+  const formatCPFOrCNPJ = (val) => {
+    const nums = val.replace(/\D/g, '').substring(0, 14);
+    if (nums.length <= 11) {
+      return nums
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    } else {
+      return nums
+        .replace(/(\d{2})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1/$2')
+        .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+    }
+  };
+
+  const focusAndScroll = (ref) => {
+    if (ref && ref.current) {
+      ref.current.focus();
+      setTimeout(() => {
+        ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 120);
+    }
+  };
+
+  const handleKeyDownNext = (e, nextRef) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      focusAndScroll(nextRef);
+    }
+  };
   const [uploading, setUploading] = useState(false);
 
   // Dados da Empresa (buscados no login)
@@ -784,10 +823,12 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
               <div>
                 <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome do Cliente *</label>
                 <input
+                  ref={clientNameRef}
                   type="text"
                   required
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
+                  onKeyDown={(e) => handleKeyDownNext(e, clientEmailRef)}
                   placeholder="Ex: Produtor Exemplo"
                   class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                 />
@@ -795,9 +836,11 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
               <div>
                 <label class="block text-slate-300 text-xs font-bold mb-1.5">E-mail do Cliente (Opcional)</label>
                 <input
+                  ref={clientEmailRef}
                   type="email"
                   value={clientEmail}
                   onChange={(e) => setClientEmail(e.target.value)}
+                  onKeyDown={(e) => handleKeyDownNext(e, clientDocumentRef)}
                   placeholder="Ex: cliente@email.com"
                   class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                 />
@@ -808,9 +851,11 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
               <div>
                 <label class="block text-slate-300 text-xs font-bold mb-1.5">CPF ou CNPJ do Cliente (Opcional)</label>
                 <input
+                  ref={clientDocumentRef}
                   type="text"
                   value={clientDocument}
-                  onChange={(e) => setClientDocument(e.target.value)}
+                  onChange={(e) => setClientDocument(formatCPFOrCNPJ(e.target.value))}
+                  onKeyDown={(e) => handleKeyDownNext(e, farmAddressRef)}
                   placeholder="Ex: 000.000.000-00 ou 00.000.000/0000-00"
                   class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                 />
@@ -818,9 +863,11 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
               <div>
                 <label class="block text-slate-300 text-xs font-bold mb-1.5">Endereço da Fazenda (Completo)</label>
                 <input
+                  ref={farmAddressRef}
                   type="text"
                   value={farmAddress}
                   onChange={(e) => setFarmAddress(e.target.value)}
+                  onKeyDown={(e) => handleKeyDownNext(e, farmNameRef)}
                   placeholder="Ex: Rodovia BR-116, Km 45, Zona Rural"
                   class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                 />
@@ -831,10 +878,12 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
               <div>
                 <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome da Fazenda *</label>
                 <input
+                  ref={farmNameRef}
                   type="text"
                   required
                   value={farmName}
                   onChange={(e) => setFarmName(e.target.value)}
+                  onKeyDown={(e) => handleKeyDownNext(e, cultureRef)}
                   placeholder="Ex: Fazenda Primavera"
                   class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                 />
@@ -842,10 +891,12 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
               <div>
                 <label class="block text-slate-300 text-xs font-bold mb-1.5">Cultura / Plantação *</label>
                 <input
+                  ref={cultureRef}
                   type="text"
                   required
                   value={culture}
                   onChange={(e) => setCulture(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } }}
                   placeholder="Ex: Soja, Milho, Pastagem"
                   class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                 />

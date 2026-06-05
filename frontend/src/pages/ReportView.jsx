@@ -1,6 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Printer, ArrowLeft, Sun, Moon, Share2 } from 'lucide-react';
 
+const ReportViewSkeleton = () => (
+  <div class="max-w-4xl mx-auto p-6 space-y-8 animate-pulse no-print">
+    <div class="flex justify-between items-center pb-4 border-b border-slate-200 dark:border-slate-700/60">
+      <div class="h-10 bg-slate-200 dark:bg-slate-800 w-32 rounded-xl"></div>
+      <div class="h-10 bg-slate-200 dark:bg-slate-800 w-48 rounded-xl"></div>
+    </div>
+    <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl space-y-6 border border-slate-200 dark:border-slate-700/40">
+      <div class="h-8 bg-slate-100 dark:bg-slate-700 w-3/4 rounded-lg"></div>
+      <div class="space-y-4">
+        <div class="h-4 bg-slate-100 dark:bg-slate-700 w-full rounded"></div>
+        <div class="h-4 bg-slate-100 dark:bg-slate-700 w-5/6 rounded"></div>
+        <div class="h-4 bg-slate-100 dark:bg-slate-700 w-4/5 rounded"></div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+        <div class="h-28 bg-slate-100 dark:bg-slate-700 rounded-2xl"></div>
+        <div class="h-28 bg-slate-100 dark:bg-slate-700 rounded-2xl"></div>
+      </div>
+    </div>
+  </div>
+);
+
 export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -26,7 +47,7 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
   }, [reportId]);
 
   if (loading) {
-    return <div class="text-center py-12 text-slate-400 no-print">Carregando visualização do relatório...</div>;
+    return <ReportViewSkeleton />;
   }
 
   if (!report) {

@@ -3,6 +3,24 @@ import { LogOut, Plus, FileText, Eye, Map, Trash2, Sun, Moon, Download, Layers, 
 import { getDrafts, deleteDraft } from '../utils/offlineDb';
 import { triggerHaptic } from '../utils/haptic';
 
+const PilotReportsSkeleton = () => (
+  <div class="space-y-4 p-6 animate-pulse">
+    {[1, 2, 3].map(i => (
+      <div key={i} class="border border-slate-200 dark:border-slate-700/40 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-100/50 dark:bg-slate-800/50">
+        <div class="space-y-2 flex-1 w-full">
+          <div class="h-4 bg-slate-200 dark:bg-slate-700 w-1/3 rounded-md"></div>
+          <div class="h-3 bg-slate-200 dark:bg-slate-700 w-1/4 rounded-md"></div>
+        </div>
+        <div class="flex items-center space-x-6 w-full sm:w-auto justify-between sm:justify-end">
+          <div class="h-4 bg-slate-200 dark:bg-slate-700 w-16 rounded-md"></div>
+          <div class="h-4 bg-slate-200 dark:bg-slate-700 w-20 rounded-md"></div>
+          <div class="h-8 bg-slate-200 dark:bg-slate-700 w-12 rounded-xl"></div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 export default function PilotDashboard({ onLogout, onCreateReport, onViewReport, theme, toggleTheme, showInstallOption, onTriggerInstall }) {
   const [reports, setReports] = useState([]);
   const [offlineDrafts, setOfflineDrafts] = useState([]);
@@ -581,7 +599,7 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
           </div>
 
           {loading ? (
-            <div class="p-12 text-center text-slate-500 dark:text-slate-400">Carregando seus relatórios...</div>
+            <PilotReportsSkeleton />
           ) : filteredReports.length === 0 ? (
             <div class="p-16 text-center space-y-4">
               <div class="w-16 h-16 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto text-slate-400 dark:text-slate-500">

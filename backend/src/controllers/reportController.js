@@ -29,7 +29,9 @@ exports.createReport = (req, res) => {
     observations,
     total_area,
     price_per_ha,
-    total_price
+    total_price,
+    pilot_signature,
+    client_signature
   } = req.body;
 
   if (!client_name || !farm_name || !culture || !report_date) {
@@ -41,8 +43,8 @@ exports.createReport = (req, res) => {
       pilot_id, company_id, client_name, farm_name, client_email, client_document, farm_address, culture, report_date,
       flights_data, weather_temp, weather_humidity, weather_desc, delta_t,
       caldas_data, ph_photo_url, ph_desc, maps_data, observations,
-      total_area, price_per_ha, total_price
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      total_area, price_per_ha, total_price, pilot_signature, client_signature
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       pilotId,
       companyId,
@@ -65,7 +67,9 @@ exports.createReport = (req, res) => {
       observations || '',
       total_area || 0,
       price_per_ha || 0,
-      total_price || 0
+      total_price || 0,
+      pilot_signature || null,
+      client_signature || null
     ],
     function(err) {
       if (err) {

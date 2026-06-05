@@ -277,6 +277,78 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
           </button>
         </section>
 
+        {/* Rascunhos Offline Detalhados */}
+        {offlineDrafts.length > 0 && (
+          <section class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 rounded-2xl overflow-hidden shadow-xs dark:shadow-none">
+            <div class="px-6 py-5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <h4 class="text-lg font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                <span>Rascunhos Salvos Localmente (Offline)</span>
+              </h4>
+              <button
+                onClick={handleSyncOfflineReports}
+                disabled={syncing}
+                class="bg-amber-550 hover:bg-amber-500 disabled:opacity-50 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-all"
+              >
+                {syncing ? 'Sincronizando...' : 'Sincronizar Todos'}
+              </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-50/70 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase border-b border-slate-200 dark:border-slate-700">
+                    <th class="px-6 py-4">Cliente / Fazenda</th>
+                    <th class="px-6 py-4">Cultura</th>
+                    <th class="px-6 py-4">Data Local</th>
+                    <th class="px-6 py-4 text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-700/40">
+                  {offlineDrafts.map(draft => (
+                    <tr key={draft.id} class="hover:bg-slate-50 dark:hover:bg-slate-700/10 transition-colors">
+                      <td class="px-6 py-4">
+                        <div class="font-bold text-slate-900 dark:text-white">{draft.client_name || 'Sem nome'}</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">{draft.farm_name || 'Sem fazenda'}</div>
+                      </td>
+                      <td class="px-6 py-4 text-sm font-semibold text-slate-750 dark:text-slate-300">
+                        {draft.culture || 'Não informada'}
+                      </td>
+                      <td class="px-6 py-4 text-sm text-slate-750 dark:text-slate-350">
+                        {draft.savedAt ? new Date(draft.savedAt).toLocaleString('pt-BR') : '-'}
+                      </td>
+                      <td class="px-6 py-4 text-center">
+                        <div class="flex items-center justify-center space-x-2">
+                          <button
+                            onClick={() => { triggerHaptic(12); onCreateReport(draft); }}
+                            class="px-3 py-1.5 text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-slate-950 rounded-lg transition-all border border-amber-500/25 animate-pulse"
+                            title="Editar rascunho local"
+                          >
+                            Editar Rascunho
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (window.confirm('Excluir este rascunho localmente?')) {
+                                triggerHaptic(15);
+                                await deleteDraft(draft.id);
+                                fetchOfflineDrafts();
+                              }
+                            }}
+                            class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-500/10 transition-all"
+                            title="Excluir rascunho local"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
         {/* Histórico do Piloto */}
         <section class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 rounded-2xl overflow-hidden shadow-xs dark:shadow-none">
           <div class="px-6 py-5 border-b border-slate-200 dark:border-slate-700">

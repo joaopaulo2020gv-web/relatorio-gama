@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Save, Plus, Trash2, Camera, MapPin, Thermometer, Droplet, DollarSign, Calendar, Sun, Moon } from 'lucide-react';
-import { saveDraft } from '../utils/offlineDb';
+import { saveDraft, deleteDraft } from '../utils/offlineDb';
 import { triggerHaptic } from '../utils/haptic';
 
 // Função auxiliar para converter arquivo em String Base64 para armazenamento offline
@@ -67,7 +67,119 @@ const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.7) =
   });
 };
 
-export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleTheme }) {
+const SignaturePad = ({ label, value, onChange }) => {
+  const canvasRef = React.useRef(null);
+  const [isDrawing, setIsDrawing] = React.useState(false);
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    ctx.strokeStyle = '#000000'; // Cor da tinta preta
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Se houver um valor inicial (imagem base64), renderiza
+    if (value) {
+      const img = new Image();
+      img.src = value;
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+    }
+  }, [value]);
+
+  const getPos = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    
+    // Suporte para mouse e touch
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    // Ajustar escala
+    const x = ((clientX - rect.left) / rect.width) * canvas.width;
+    const y = ((clientY - rect.top) / rect.height) * canvas.height;
+    return { x, y };
+  };
+
+  const startDrawing = (e) => {
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    setIsDrawing(true);
+    triggerHaptic(5);
+  };
+
+  const draw = (e) => {
+    if (!isDrawing) return;
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    if (!isDrawing) return;
+    setIsDrawing(false);
+    const canvas = canvasRef.current;
+    if (canvas) {
+      onChange(canvas.toDataURL());
+    }
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    onChange(null);
+    triggerHaptic(10);
+  };
+
+  return (
+    <div className="flex flex-col space-y-2">
+      <div className="flex justify-between items-center">
+        <span className="text-slate-350 text-xs font-bold">{label}</span>
+        <button
+          type="button"
+          onClick={clearCanvas}
+          className="text-[11px] text-red-400 hover:text-red-350 font-black uppercase tracking-wider"
+        >
+          Limpar
+        </button>
+      </div>
+      <div className="border border-slate-700 bg-white rounded-2xl overflow-hidden shadow-inner">
+        <canvas
+          ref={canvasRef}
+          width={400}
+          height={150}
+          className="w-full h-[150px] cursor-crosshair block touch-none"
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={stopDrawing}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default function ReportWizard({ initialData, onCancel, onSaveSuccess, theme, toggleTheme }) {
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -78,28 +190,29 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
   // ==========================================
   // ESTADO DO RELATÓRIO
   // ==========================================
-  const [clientName, setClientName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
-  const [clientDocument, setClientDocument] = useState('');
-  const [farmAddress, setFarmAddress] = useState('');
-  const [farmName, setFarmName] = useState('');
-  const [culture, setCulture] = useState('Pastagem');
-  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
+  const [draftId, setDraftId] = useState(initialData?.id || null);
+  const [clientName, setClientName] = useState(initialData?.client_name || '');
+  const [clientEmail, setClientEmail] = useState(initialData?.client_email || '');
+  const [clientDocument, setClientDocument] = useState(initialData?.client_document || '');
+  const [farmAddress, setFarmAddress] = useState(initialData?.farm_address || '');
+  const [farmName, setFarmName] = useState(initialData?.farm_name || '');
+  const [culture, setCulture] = useState(initialData?.culture || 'Pastagem');
+  const [reportDate, setReportDate] = useState(initialData?.report_date || new Date().toISOString().split('T')[0]);
 
   // Passo 2: Histórico de Voo
-  const [flights, setFlights] = useState([
+  const [flights, setFlights] = useState(initialData?.flights_data || [
     { date: new Date().toISOString().split('T')[0], drone: 'T20P', area: 10, height: '8,0-12,0', width: '6', speed: '18-21' }
   ]);
   const [pilotResponsible, setPilotResponsible] = useState(user.name);
 
   // Passo 3: Clima
-  const [weatherTemp, setWeatherTemp] = useState(25);
-  const [weatherHumidity, setWeatherHumidity] = useState(70);
-  const [weatherDesc, setWeatherDesc] = useState('As aplicações ficaram dentro dos limites de indicação.');
-  const [deltaT, setDeltaT] = useState(4);
+  const [weatherTemp, setWeatherTemp] = useState(initialData?.weather_temp || 25);
+  const [weatherHumidity, setWeatherHumidity] = useState(initialData?.weather_humidity || 70);
+  const [weatherDesc, setWeatherDesc] = useState(initialData?.weather_desc || 'As aplicações ficaram dentro dos limites de indicação.');
+  const [deltaT, setDeltaT] = useState(initialData?.delta_t || 4);
 
   // Passo 4: Caldas
-  const [caldas, setCaldas] = useState([
+  const [caldas, setCaldas] = useState(initialData?.caldas_data || [
     {
       day: 'DIA 1',
       location: 'Geral',
@@ -109,18 +222,22 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
       total: '0 L/ha'
     }
   ]);
-  const [phPhotoUrl, setPhPhotoUrl] = useState('');
-  const [phDesc, setPhDesc] = useState('');
+  const [phPhotoUrl, setPhPhotoUrl] = useState(initialData?.ph_photo_url || '');
+  const [phDesc, setPhDesc] = useState(initialData?.ph_desc || '');
 
   // Passo 5: Mapas
-  const [maps, setMaps] = useState([]); // Array de { photo_url, description }
+  const [maps, setMaps] = useState(initialData?.maps_data || []); // Array de { photo_url, description }
   
   // Passo 6: Fechamento
-  const [observations, setObservations] = useState('');
-  const [pricePerHa, setPricePerHa] = useState(150); // R$ 150 por hectare padrão
+  const [observations, setObservations] = useState(initialData?.observations || '');
+  const [pricePerHa, setPricePerHa] = useState(initialData?.price_per_ha || 150); // R$ 150 por hectare padrão
   const [bankInfo, setBankInfo] = useState({
     bank_name: '', bank_agency: '', bank_account: '', bank_owner: '', bank_cpf_pix: ''
   });
+
+  const [pilotSignature, setPilotSignature] = useState(initialData?.pilot_signature || null);
+  const [clientSignature, setClientSignature] = useState(initialData?.client_signature || null);
+
 
   // ==========================================
   // CÁLCULOS E UTILS
@@ -320,6 +437,59 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
   };
 
   // ==========================================
+  // CAPTURA CLIMÁTICA VIA GPS
+  // ==========================================
+  const handleFillWeatherViaGPS = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocalização não é suportada pelo seu navegador.");
+      return;
+    }
+    
+    triggerHaptic(15);
+    setUploading(true);
+    setError('');
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m`);
+          if (!res.ok) throw new Error("Falha ao buscar dados climáticos.");
+          const data = await res.json();
+          
+          if (data && data.current) {
+            const temp = data.current.temperature_2m;
+            const humidity = data.current.relative_humidity_2m;
+            const windSpeed = data.current.wind_speed_10m;
+            const windDir = data.current.wind_direction_10m;
+            
+            setWeatherTemp(temp);
+            setWeatherHumidity(humidity);
+            
+            const directions = ['Norte', 'Nordeste', 'Leste', 'Sudeste', 'Sul', 'Sudoeste', 'Oeste', 'Noroeste'];
+            const idx = Math.round(((windDir % 360) / 45)) % 8;
+            const cardinal = directions[idx];
+            
+            const newDesc = `Clima capturado via GPS. Temperatura de ${temp}°C, umidade de ${humidity}%, vento de ${windSpeed} km/h direção ${cardinal}. As condições estavam adequadas de acordo com as especificações.`;
+            setWeatherDesc(newDesc);
+          }
+        } catch (err) {
+          console.error("Erro ao buscar clima:", err);
+          alert("Não foi possível obter os dados climáticos. Tente novamente ou insira manualmente.");
+        } finally {
+          setUploading(false);
+        }
+      },
+      (error) => {
+        console.error("Erro de geolocalização:", error);
+        alert("Erro ao obter localização. Verifique as permissões de GPS do seu aparelho.");
+        setUploading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // ==========================================
   // SALVAR RELATÓRIO
   // ==========================================
   const handleSaveReport = async () => {
@@ -329,7 +499,14 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
       return;
     }
 
+    if (!pilotSignature || !clientSignature) {
+      setError('Por favor, colete as assinaturas digitais do piloto e do cliente no Passo 6 antes de finalizar.');
+      setStep(6);
+      return;
+    }
+
     const reportPayload = {
+      ...(draftId ? { id: draftId } : {}),
       client_name: clientName,
       farm_name: farmName,
       client_email: clientEmail,
@@ -349,7 +526,9 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
       observations,
       total_area: totalArea,
       price_per_ha: pricePerHa,
-      total_price: totalPrice
+      total_price: totalPrice,
+      pilot_signature: pilotSignature,
+      client_signature: clientSignature
     };
 
     // Se o navegador estiver offline, salva o rascunho no IndexedDB
@@ -377,6 +556,15 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao salvar relatório.');
+      }
+
+      // Se havia um rascunho e salvamos online, remove o rascunho local
+      if (draftId) {
+        try {
+          await deleteDraft(draftId);
+        } catch (delErr) {
+          console.error('Erro ao deletar rascunho pós-sincronização:', delErr);
+        }
       }
 
       onSaveSuccess();
@@ -699,9 +887,19 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
            ========================================== */}
         {step === 3 && (
           <div class="space-y-6">
-            <div class="border-b border-slate-700 pb-2 flex items-center space-x-2">
-              <Thermometer class="text-primary-500" size={20} />
-              <h3 class="text-lg font-bold">Condições Climáticas & Delta T</h3>
+            <div class="border-b border-slate-700 pb-2 flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <Thermometer class="text-primary-500" size={20} />
+                <h3 class="text-lg font-bold">Condições Climáticas & Delta T</h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleFillWeatherViaGPS}
+                class="flex items-center space-x-1.5 bg-primary-600/20 text-primary-400 border border-primary-500/30 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-primary-600 hover:text-white transition-all"
+              >
+                <MapPin size={13} />
+                <span>Autopreencher via GPS</span>
+              </button>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1064,6 +1262,23 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
                 rows="4"
                 class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
               ></textarea>
+            </div>
+
+            {/* Áreas de Assinatura Digital Touch */}
+            <div class="border-t border-slate-700 pt-6 space-y-4">
+              <h4 class="text-sm font-bold text-primary-400 uppercase tracking-wider">Assinaturas Digitais</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <SignaturePad 
+                  label="Assinatura do Piloto Responsável *" 
+                  value={pilotSignature} 
+                  onChange={setPilotSignature} 
+                />
+                <SignaturePad 
+                  label="Assinatura do Produtor / Cliente *" 
+                  value={clientSignature} 
+                  onChange={setClientSignature} 
+                />
+              </div>
             </div>
           </div>
         )}

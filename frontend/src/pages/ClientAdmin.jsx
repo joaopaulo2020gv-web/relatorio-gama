@@ -17,6 +17,8 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
   const [syncProgress, setSyncProgress] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, settings, pilots, reports
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
 
   // Estados dos formulários
   const [logoFile, setLogoFile] = useState(null);
@@ -640,73 +642,155 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                   </div>
                 </div>
 
-                {/* Conteúdo Secundário: Rankings de Performance */}
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  
+                 {/* Conteúdo Secundário: Rankings de Performance */}
+                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                   
                   {/* Desempenho por Piloto */}
-                  <div class="lg:col-span-2 bg-slate-800 border border-slate-700/40 p-6 rounded-2xl space-y-4">
+                  <div class="lg:col-span-2 bg-slate-800 border border-slate-700/40 p-6 rounded-2xl space-y-4 flex flex-col justify-between">
                     <h4 class="text-sm font-bold text-primary-400 border-b border-slate-700/60 pb-1.5 uppercase tracking-wider flex items-center space-x-2">
                       <Award size={16} />
-                      <span>Desempenho por Piloto</span>
+                      <span>Produtividade por Piloto</span>
                     </h4>
                     
                     {pilotPerformance.length === 0 ? (
-                      <div class="p-8 text-center text-slate-500 text-xs">Sem dados de aplicação de pilotos ainda.</div>
+                      <div class="p-8 text-center text-slate-500 text-xs my-auto">Sem dados de aplicação de pilotos ainda.</div>
                     ) : (
-                      <div class="space-y-4 pt-1">
-                        {pilotPerformance.map((item, idx) => {
-                          const maxArea = Math.max(...pilotPerformance.map(p => p.area));
-                          const percent = maxArea > 0 ? (item.area / maxArea) * 100 : 0;
-                          return (
-                            <div key={idx} class="space-y-1.5">
-                              <div class="flex justify-between items-center text-xs font-bold">
-                                <span class="text-white flex items-center space-x-1.5">
-                                  <span class="w-5 h-5 rounded-md bg-slate-900 border border-slate-700 text-[10px] flex items-center justify-center text-slate-400">{idx + 1}</span>
-                                  <span>{item.name}</span>
+                      <div class="space-y-6 flex-1 flex flex-col justify-end">
+                        {/* Eixo de Gráfico de Barras Verticais */}
+                        <div class="h-44 w-full flex items-end justify-around border-b border-slate-700/60 pb-2 relative mt-4">
+                          {pilotPerformance.map((item, idx) => {
+                            const maxPilotArea = Math.max(...pilotPerformance.map(p => p.area), 0);
+                            const heightPercent = maxPilotArea > 0 ? (item.area / maxPilotArea) * 80 : 0;
+                            return (
+                              <div key={idx} class="flex flex-col items-center group relative flex-1 max-w-[80px] px-1">
+                                {/* Tooltip no hover */}
+                                <div class={`absolute -top-12 bg-slate-900 border border-slate-700 text-white rounded-xl px-2.5 py-1.5 text-[10px] font-black text-center z-10 pointer-events-none transition-all duration-200 ${
+                                  hoveredBarIndex === idx ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-1 scale-95'
+                                }`}>
+                                  <div>{item.area.toFixed(1)} ha</div>
+                                  <div class="text-emerald-400 font-extrabold">{item.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}</div>
+                                </div>
+
+                                {/* Barra */}
+                                <div 
+                                  onMouseEnter={() => setHoveredBarIndex(idx)}
+                                  onMouseLeave={() => setHoveredBarIndex(null)}
+                                  style={{ height: `${Math.max(heightPercent, 5)}%` }}
+                                  class="w-full bg-gradient-to-t from-primary-600 to-emerald-500 rounded-t-lg transition-all duration-300 cursor-pointer shadow-md shadow-primary-500/10 hover:shadow-primary-500/30 group-hover:scale-105 origin-bottom"
+                                />
+
+                                {/* Nome do Piloto */}
+                                <span class="text-[10px] text-slate-400 font-bold truncate w-full text-center mt-2.5">
+                                  {item.name.split(' ')[0]}
                                 </span>
-                                <span class="text-slate-300 font-black">{item.area.toFixed(1).replace('.', ',')} ha <span class="text-slate-500">|</span> <span class="text-emerald-400">{item.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></span>
                               </div>
-                              <div class="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-                                <div class="h-full bg-gradient-to-r from-primary-600 to-emerald-500 rounded-full" style={{ width: `${percent}%` }}></div>
-                              </div>
-                              <div class="text-[9px] text-slate-500 font-semibold">{item.count} relatório(s) gerado(s)</div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
+                        <div class="flex justify-between items-center text-[10px] text-slate-500 font-semibold px-2">
+                          <span>* Passe o mouse/toque nas barras para ver detalhes</span>
+                          <span>Área total do melhor piloto: <strong class="text-slate-400">{Math.max(...pilotPerformance.map(p => p.area), 0).toFixed(1)} ha</strong></span>
+                        </div>
                       </div>
                     )}
                   </div>
 
                   {/* Mix de Culturas */}
-                  <div class="lg:col-span-1 bg-slate-800 border border-slate-700/40 p-6 rounded-2xl space-y-4">
+                  <div class="lg:col-span-1 bg-slate-800 border border-slate-700/40 p-6 rounded-2xl space-y-4 flex flex-col justify-between">
                     <h4 class="text-sm font-bold text-primary-400 border-b border-slate-700/60 pb-1.5 uppercase tracking-wider flex items-center space-x-2">
                       <Layers size={16} />
-                      <span>Mix de Culturas (ha)</span>
+                      <span>Mix de Culturas</span>
                     </h4>
 
                     {cultureMix.length === 0 ? (
-                      <div class="p-8 text-center text-slate-500 text-xs">Sem dados de culturas ainda.</div>
+                      <div class="p-8 text-center text-slate-500 text-xs my-auto">Sem dados de culturas ainda.</div>
                     ) : (
-                      <div class="space-y-4 pt-1">
-                        {cultureMix.map((item, idx) => {
-                          const totalMixArea = cultureMix.reduce((sum, c) => sum + c.area, 0);
-                          const percent = totalMixArea > 0 ? (item.area / totalMixArea) * 100 : 0;
-                          return (
-                            <div key={idx} class="space-y-1.5">
-                              <div class="flex justify-between items-center text-xs">
-                                <span class="text-white font-bold">{item.name}</span>
-                                <span class="text-slate-300 font-bold">{item.area.toFixed(1).replace('.', ',')} ha ({percent.toFixed(0)}%)</span>
+                      <div class="space-y-6 flex-1 flex flex-col justify-center">
+                        <div class="relative flex items-center justify-center h-44">
+                          <svg width="160" height="160" viewBox="0 0 120 120" class="transform -rotate-90">
+                            <circle cx="60" cy="60" r="50" fill="transparent" stroke="rgba(255,255,255,0.05)" stroke-width="12" />
+                            {(() => {
+                              const totalMixArea = cultureMix.reduce((sum, c) => sum + c.area, 0);
+                              let accumulatedPercent = 0;
+                              const donutData = cultureMix.map((item, idx) => {
+                                const percent = totalMixArea > 0 ? (item.area / totalMixArea) * 100 : 0;
+                                const strokeLength = (percent / 100) * 314.16;
+                                const strokeOffset = 314.16 - ((accumulatedPercent / 100) * 314.16);
+                                accumulatedPercent += percent;
+                                const color = `hsl(${(idx * 137.5) % 360}, 75%, 55%)`;
+                                return { ...item, percent, strokeLength, strokeOffset, color };
+                              });
+
+                              return donutData.map((item, idx) => (
+                                <circle
+                                  key={idx}
+                                  cx="60"
+                                  cy="60"
+                                  r="50"
+                                  fill="transparent"
+                                  stroke={item.color}
+                                  stroke-width={hoveredIndex === idx ? 16 : 12}
+                                  stroke-dasharray={`${item.strokeLength} 314.16`}
+                                  stroke-dashoffset={item.strokeOffset}
+                                  stroke-linecap="round"
+                                  class="transition-all duration-300 cursor-pointer origin-center hover:scale-105"
+                                  onMouseEnter={() => setHoveredIndex(idx)}
+                                  onMouseLeave={() => setHoveredIndex(null)}
+                                />
+                              ));
+                            })()}
+                          </svg>
+                          <div class="absolute text-center flex flex-col justify-center items-center pointer-events-none w-28 overflow-hidden">
+                            {hoveredIndex !== null ? (
+                              <>
+                                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider truncate w-full">
+                                  {cultureMix[hoveredIndex]?.name}
+                                </span>
+                                <span class="text-sm font-black text-white">
+                                  {cultureMix[hoveredIndex]?.area.toFixed(1).replace('.', ',')} ha
+                                </span>
+                                <span class="text-[9px] text-slate-400 font-semibold">
+                                  {(((cultureMix[hoveredIndex]?.area || 0) / (cultureMix.reduce((sum, c) => sum + c.area, 0) || 1)) * 100).toFixed(0)}%
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Total</span>
+                                <span class="text-sm font-black text-white">
+                                  {cultureMix.reduce((sum, c) => sum + c.area, 0).toFixed(1).replace('.', ',')} ha
+                                </span>
+                                <span class="text-[9px] text-slate-500 font-semibold">{cultureMix.length} Culturas</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Legendas coloridas */}
+                        <div class="grid grid-cols-2 gap-2 text-[10px] max-h-24 overflow-y-auto pr-1 no-scrollbar">
+                          {cultureMix.map((item, idx) => {
+                            const totalMixArea = cultureMix.reduce((sum, c) => sum + c.area, 0);
+                            const percent = totalMixArea > 0 ? (item.area / totalMixArea) * 100 : 0;
+                            const color = `hsl(${(idx * 137.5) % 360}, 75%, 55%)`;
+                            return (
+                              <div 
+                                key={idx} 
+                                onMouseEnter={() => setHoveredIndex(idx)}
+                                onMouseLeave={() => setHoveredIndex(null)}
+                                class={`flex items-center space-x-1.5 cursor-pointer p-1 rounded-lg transition-colors ${
+                                  hoveredIndex === idx ? 'bg-slate-700/30' : ''
+                                }`}
+                              >
+                                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }}></span>
+                                <span class="text-slate-350 font-bold truncate flex-1">{item.name}</span>
+                                <span class="text-white font-extrabold">{percent.toFixed(0)}%</span>
                               </div>
-                              <div class="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-                                <div class="h-full bg-primary-500 rounded-full" style={{ width: `${percent}%` }}></div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
-                </div>
+                 </div>
 
                 {/* Laudos Recentes */}
                 <div class="bg-slate-800 border border-slate-700/40 rounded-2xl overflow-hidden">
@@ -1017,78 +1101,149 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
 
             {/* ABA: LAUDOS EMITIDOS */}
             {activeTab === 'reports' && (
-              <div class="bg-slate-800 border border-slate-700/40 rounded-2xl overflow-hidden">
-                <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between flex-wrap gap-4">
-                  <h3 class="text-lg font-bold">Histórico de Relatórios da Empresa</h3>
-                  <button
-                    onClick={onCreateReport}
-                    class="flex items-center space-x-1.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all"
-                  >
-                    <span>Elaborar Relatório</span>
-                  </button>
-                </div>
-
-                {reports.length === 0 ? (
-                  <div class="p-12 text-center text-slate-400 space-y-4">
-                    <p>Nenhum relatório foi gerado por seus pilotos ainda.</p>
-                    <button
-                      onClick={onCreateReport}
-                      class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white font-bold rounded-xl text-xs transition-all"
-                    >
-                      Elaborar Primeiro Relatório
-                    </button>
-                  </div>
-                ) : (
-                  <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                      <thead>
-                        <tr class="bg-slate-900/50 text-slate-400 text-xs font-bold uppercase border-b border-slate-700">
-                          <th class="px-6 py-3">Cliente / Fazenda</th>
-                          <th class="px-6 py-3">Data Aplicação</th>
-                          <th class="px-6 py-3">Área Total (ha)</th>
-                          <th class="px-6 py-3">Valor Total</th>
-                          <th class="px-6 py-3">Piloto Responsável</th>
-                          <th class="px-6 py-3 text-center">Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody class="divide-y divide-slate-700/40">
-                        {reports.map(r => (
-                          <tr key={r.id} class="hover:bg-slate-700/10">
-                            <td class="px-6 py-4">
-                              <div class="font-semibold text-white">{r.client_name}</div>
-                              <div class="text-xs text-slate-400 font-semibold">{r.farm_name}</div>
-                            </td>
-                            <td class="px-6 py-4 text-sm font-semibold text-slate-300">{new Date(r.report_date).toLocaleDateString('pt-BR')}</td>
-                            <td class="px-6 py-4 text-sm font-bold text-slate-300">{r.total_area} ha</td>
-                            <td class="px-6 py-4 text-sm font-black text-emerald-400">
-                              {r.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </td>
-                            <td class="px-6 py-4 text-sm font-semibold text-slate-300">{r.pilot_name}</td>
-                            <td class="px-6 py-4 text-center">
-                              <div class="flex items-center justify-center space-x-2">
-                                <button
-                                  onClick={() => { triggerHaptic(10); onViewReport(r.id); }}
-                                  class="p-2 text-primary-400 hover:text-white bg-slate-950/20 hover:bg-primary-600 border border-slate-700/60 hover:border-primary-500 rounded-lg transition-all"
-                                  title="Ver Relatório / Exportar PDF"
-                                >
-                                  <Eye size={16} />
-                                </button>
-                                <button
-                                  onClick={() => { triggerHaptic(15); handleDeleteReport(r.id); }}
-                                  class="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 bg-slate-950/20 hover:bg-red-500/10 border border-slate-700/60 hover:border-red-500/20 rounded-lg transition-all"
-                                  title="Excluir Relatório"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            </td>
+              <>
+                {offlineDrafts.length > 0 && (
+                  <div class="bg-slate-800 border border-slate-700/40 rounded-2xl overflow-hidden mb-6">
+                    <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between">
+                      <h4 class="text-sm font-bold text-white flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                        <span>Rascunhos Salvos Localmente (Offline)</span>
+                      </h4>
+                      <button
+                        onClick={handleSyncOfflineReports}
+                        disabled={syncing}
+                        class="bg-amber-550 hover:bg-amber-500 disabled:opacity-50 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-all"
+                      >
+                        {syncing ? 'Sincronizando...' : 'Sincronizar Todos'}
+                      </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse">
+                        <thead>
+                          <tr class="bg-slate-900/50 text-slate-400 text-[10px] font-bold uppercase border-b border-slate-700">
+                            <th class="px-6 py-3">Cliente / Fazenda</th>
+                            <th class="px-6 py-3">Cultura</th>
+                            <th class="px-6 py-3">Data Local</th>
+                            <th class="px-6 py-3 text-center">Ações</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody class="divide-y divide-slate-700/40 text-xs font-semibold text-slate-350">
+                          {offlineDrafts.map(draft => (
+                            <tr key={draft.id} class="hover:bg-slate-700/10">
+                              <td class="px-6 py-3">
+                                <div class="font-bold text-white">{draft.client_name || 'Sem nome'}</div>
+                                <div class="text-[10px] text-slate-500 font-semibold">{draft.farm_name || 'Sem fazenda'}</div>
+                              </td>
+                              <td class="px-6 py-3">{draft.culture || 'Não informada'}</td>
+                              <td class="px-6 py-3">
+                                {draft.savedAt ? new Date(draft.savedAt).toLocaleString('pt-BR') : '-'}
+                              </td>
+                              <td class="px-6 py-3 text-center">
+                                <div class="flex items-center justify-center space-x-2">
+                                  <button
+                                    onClick={() => { triggerHaptic(12); onCreateReport(draft); }}
+                                    class="px-3 py-1.5 text-[10px] font-bold bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-slate-950 rounded-lg transition-all border border-amber-500/25 animate-pulse"
+                                    title="Editar rascunho local"
+                                  >
+                                    Editar Rascunho
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (window.confirm('Excluir este rascunho localmente?')) {
+                                        triggerHaptic(15);
+                                        await deleteDraft(draft.id);
+                                        fetchOfflineDrafts();
+                                      }
+                                    }}
+                                    class="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-all"
+                                    title="Excluir rascunho local"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
-              </div>
+
+                <div class="bg-slate-800 border border-slate-700/40 rounded-2xl overflow-hidden">
+                  <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between flex-wrap gap-4">
+                    <h3 class="text-lg font-bold">Histórico de Relatórios da Empresa</h3>
+                    <button
+                      onClick={onCreateReport}
+                      class="flex items-center space-x-1.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all"
+                    >
+                      <span>Elaborar Relatório</span>
+                    </button>
+                  </div>
+
+                  {reports.length === 0 ? (
+                    <div class="p-12 text-center text-slate-400 space-y-4">
+                      <p>Nenhum relatório foi gerado por seus pilotos ainda.</p>
+                      <button
+                        onClick={onCreateReport}
+                        class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white font-bold rounded-xl text-xs transition-all"
+                      >
+                        Elaborar Primeiro Relatório
+                      </button>
+                    </div>
+                  ) : (
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse">
+                        <thead>
+                          <tr class="bg-slate-900/50 text-slate-400 text-xs font-bold uppercase border-b border-slate-700">
+                            <th class="px-6 py-3">Cliente / Fazenda</th>
+                            <th class="px-6 py-3">Data Aplicação</th>
+                            <th class="px-6 py-3">Área Total (ha)</th>
+                            <th class="px-6 py-3">Valor Total</th>
+                            <th class="px-6 py-3">Piloto Responsável</th>
+                            <th class="px-6 py-3 text-center">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-700/40">
+                          {reports.map(r => (
+                            <tr key={r.id} class="hover:bg-slate-700/10">
+                              <td class="px-6 py-4">
+                                <div class="font-semibold text-white">{r.client_name}</div>
+                                <div class="text-xs text-slate-400 font-semibold">{r.farm_name}</div>
+                              </td>
+                              <td class="px-6 py-4 text-sm font-semibold text-slate-300">{new Date(r.report_date).toLocaleDateString('pt-BR')}</td>
+                              <td class="px-6 py-4 text-sm font-bold text-slate-300">{r.total_area} ha</td>
+                              <td class="px-6 py-4 text-sm font-black text-emerald-400">
+                                {r.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </td>
+                              <td class="px-6 py-4 text-sm font-semibold text-slate-300">{r.pilot_name}</td>
+                              <td class="px-6 py-4 text-center">
+                                <div class="flex items-center justify-center space-x-2">
+                                  <button
+                                    onClick={() => { triggerHaptic(10); onViewReport(r.id); }}
+                                    class="p-2 text-primary-400 hover:text-white bg-slate-950/20 hover:bg-primary-600 border border-slate-700/60 hover:border-primary-500 rounded-lg transition-all"
+                                    title="Ver Relatório / Exportar PDF"
+                                  >
+                                    <Eye size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => { triggerHaptic(15); handleDeleteReport(r.id); }}
+                                    class="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 bg-slate-950/20 hover:bg-red-500/10 border border-slate-700/60 hover:border-red-500/20 rounded-lg transition-all"
+                                    title="Excluir Relatório"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </>
         )}

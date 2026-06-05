@@ -439,6 +439,29 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
                 </div>
               </div>
             </div>
+            {/* 5. ASSINATURAS DIGITAIS */}
+            <div class="mt-8 pt-4 border-t border-slate-200">
+              <div class="grid grid-cols-2 gap-8 text-center text-xs font-semibold text-slate-700">
+                <div class="flex flex-col items-center justify-end h-32">
+                  {report.pilot_signature ? (
+                    <img src={report.pilot_signature} alt="Assinatura do Piloto" class="max-h-20 max-w-full object-contain mb-2" />
+                  ) : (
+                    <div class="w-full border-b border-dashed border-slate-400 mb-6"></div>
+                  )}
+                  <div class="font-bold text-slate-800">PILOTO RESPONSÁVEL</div>
+                  <div class="text-[10px] text-slate-500">{pilotResponsible}</div>
+                </div>
+                <div class="flex flex-col items-center justify-end h-32">
+                  {report.client_signature ? (
+                    <img src={report.client_signature} alt="Assinatura do Cliente" class="max-h-20 max-w-full object-contain mb-2" />
+                  ) : (
+                    <div class="w-full border-b border-dashed border-slate-400 mb-6"></div>
+                  )}
+                  <div class="font-bold text-slate-800">CONTRATANTE / PRODUTOR</div>
+                  <div class="text-[10px] text-slate-500">{report.client_name}</div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Rodapé impresso (Marca d'água) */}

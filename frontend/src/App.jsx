@@ -11,9 +11,9 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // Roteamento baseado em estado para máxima compatibilidade offline
   const [page, setPage] = useState('dashboard'); // dashboard, create-report, view-report
   const [selectedReportId, setSelectedReportId] = useState(null);
+  const [draftToEdit, setDraftToEdit] = useState(null);
 
   // Estados para controle de instalação do PWA
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -259,8 +259,13 @@ export default function App() {
         if (page === 'create-report') {
           return (
             <ReportWizard
-              onCancel={() => setPage('dashboard')}
+              initialData={draftToEdit}
+              onCancel={() => {
+                setDraftToEdit(null);
+                setPage('dashboard');
+              }}
               onSaveSuccess={() => {
+                setDraftToEdit(null);
                 setPage('dashboard');
               }}
               theme={theme}
@@ -271,7 +276,10 @@ export default function App() {
         return (
           <ClientAdmin
             onLogout={handleLogout}
-            onCreateReport={() => setPage('create-report')}
+            onCreateReport={(draft) => {
+              setDraftToEdit(draft || null);
+              setPage('create-report');
+            }}
             onViewReport={(reportId) => {
               setSelectedReportId(reportId);
               setPage('view-report');
@@ -287,8 +295,13 @@ export default function App() {
         if (page === 'create-report') {
           return (
             <ReportWizard
-              onCancel={() => setPage('dashboard')}
+              initialData={draftToEdit}
+              onCancel={() => {
+                setDraftToEdit(null);
+                setPage('dashboard');
+              }}
               onSaveSuccess={() => {
+                setDraftToEdit(null);
                 setPage('dashboard');
               }}
               theme={theme}
@@ -299,7 +312,10 @@ export default function App() {
         return (
           <PilotDashboard
             onLogout={handleLogout}
-            onCreateReport={() => setPage('create-report')}
+            onCreateReport={(draft) => {
+              setDraftToEdit(draft || null);
+              setPage('create-report');
+            }}
             onViewReport={(reportId) => {
               setSelectedReportId(reportId);
               setPage('view-report');

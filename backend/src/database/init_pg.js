@@ -110,7 +110,7 @@ async function initPg(pool) {
     `);
     console.log('Tabela "reports" verificada/criada.');
 
-    // Executar migração de coluna client_email na tabela reports se ela já existe
+    // Executar migração de colunas na tabela reports se ela já existe
     await client.query(`
       ALTER TABLE reports ADD COLUMN IF NOT EXISTS client_email TEXT;
     `);
@@ -120,7 +120,13 @@ async function initPg(pool) {
     await client.query(`
       ALTER TABLE reports ADD COLUMN IF NOT EXISTS farm_address TEXT;
     `);
-    console.log('Colunas opcionais de migração (client_email, client_document, farm_address) verificadas/criadas na tabela "reports".');
+    await client.query(`
+      ALTER TABLE reports ADD COLUMN IF NOT EXISTS pilot_signature TEXT;
+    `);
+    await client.query(`
+      ALTER TABLE reports ADD COLUMN IF NOT EXISTS client_signature TEXT;
+    `);
+    console.log('Colunas opcionais de migração (client_email, client_document, farm_address, pilot_signature, client_signature) verificadas/criadas na tabela "reports".');
 
     // 4. Inserir SuperAdmin padrão se não existir
     const checkRes = await client.query("SELECT COUNT(*) as count FROM users WHERE role = 'superadmin'");

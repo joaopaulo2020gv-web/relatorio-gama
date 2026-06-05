@@ -39,7 +39,7 @@ export async function saveDraft(draft) {
       savedAt: new Date().toISOString()
     };
 
-    const request = store.add(draftWithTime);
+    const request = store.put(draftWithTime);
 
     request.onsuccess = (event) => {
       console.log('Rascunho salvo offline com ID:', event.target.result);

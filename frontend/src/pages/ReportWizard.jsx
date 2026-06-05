@@ -753,7 +753,6 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
                     <input
                       type="file"
                       accept="image/*"
-                      capture="environment"
                       class="hidden"
                       onChange={(e) => handlePhotoUpload(e.target.files[0], setPhPhotoUrl)}
                     />

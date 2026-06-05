@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, ArrowLeft, Sun, Moon } from 'lucide-react';
+import { Printer, ArrowLeft, Sun, Moon, Share2 } from 'lucide-react';
 
 export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
   const [report, setReport] = useState(null);
@@ -36,6 +36,28 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
   const printYear = new Date(report.report_date).getFullYear();
   const pilotResponsible = report.pilot_name;
 
+  const handleShareReport = async () => {
+    const shareText = `Olá! Segue o Relatório de Pulverização Agrícola RTP ${report.id}/${printYear} da Fazenda ${report.farm_name} (Cliente: ${report.client_name}), gerado pelo AgroSkan.`;
+    const shareUrl = window.location.href;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Relatório AgroSkan - RTP ${report.id}/${printYear}`,
+          text: shareText,
+          url: shareUrl
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Erro ao compartilhar:', err);
+        }
+      }
+    } else {
+      const formattedText = encodeURIComponent(`${shareText}\n\nConfira os detalhes no link abaixo:\n${shareUrl}`);
+      window.open(`https://api.whatsapp.com/send?text=${formattedText}`, '_blank');
+    }
+  };
+
   return (
     <div class="report-view-container min-h-screen bg-slate-50 dark:bg-slate-900 md:p-6 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200">
       
@@ -61,13 +83,23 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
           </button>
         </div>
         
-        <button
-          onClick={() => window.print()}
-          class="flex items-center space-x-2 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-5 py-2.5 rounded-xl text-sm font-extrabold shadow-lg shadow-primary-500/10 transition-all"
-        >
-          <Printer size={16} />
-          <span>Exportar PDF / Imprimir</span>
-        </button>
+        <div class="flex items-center space-x-2">
+          <button
+            onClick={handleShareReport}
+            class="flex items-center space-x-2 bg-emerald-605 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-extrabold shadow-lg shadow-emerald-500/10 transition-all"
+          >
+            <Share2 size={16} />
+            <span>Compartilhar</span>
+          </button>
+          
+          <button
+            onClick={() => window.print()}
+            class="flex items-center space-x-2 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-5 py-2.5 rounded-xl text-sm font-extrabold shadow-lg shadow-primary-500/10 transition-all"
+          >
+            <Printer size={16} />
+            <span>Exportar PDF / Imprimir</span>
+          </button>
+        </div>
       </div>
 
       {/* ==========================================

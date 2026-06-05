@@ -65,7 +65,7 @@ export default function ReportView({ reportId, onBack }) {
         {/* ==========================================
            PÁGINA 1: CAPA
            ========================================== */}
-        <div class="h-[25cm] flex flex-col justify-between relative">
+        <div class="page-break-inside-avoid h-[25cm] print:h-[22.5cm] flex flex-col justify-between relative">
           {/* Logo Topo Direita */}
           <div class="flex justify-end">
             {report.company_logo_url ? (

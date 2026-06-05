@@ -63,6 +63,7 @@ input:focus, select:focus, textarea:focus {
 
   /* Ajustar o container de visualização do PDF */
   .print-container {
+    display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;

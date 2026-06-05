@@ -69,7 +69,7 @@ export default function ReportView({ reportId, onBack }) {
           {/* Logo Topo Direita */}
           <div class="flex justify-end">
             {report.company_logo_url ? (
-              <img src={report.company_logo_url} alt="Logo" class="h-12 max-w-[150px] object-contain" />
+              <img src={report.company_logo_url} alt="Logo" class="h-16 max-w-[200px] object-contain" />
             ) : (
               <span class="text-sm font-black tracking-tight text-slate-700 uppercase">{report.company_name}</span>
             )}
@@ -78,11 +78,10 @@ export default function ReportView({ reportId, onBack }) {
           {/* Logo Principal Centro */}
           <div class="flex flex-col items-center justify-center flex-1 my-16 space-y-6">
             {report.company_logo_url ? (
-              <img src={report.company_logo_url} alt="Logo Central" class="h-28 max-w-[300px] object-contain" />
+              <img src={report.company_logo_url} alt="Logo Central" class="h-36 max-w-[400px] object-contain" />
             ) : (
-              <span class="text-4xl font-black text-slate-700 uppercase tracking-wider">{report.company_name}</span>
+              <span class="text-5xl font-black text-slate-700 uppercase tracking-wider">{report.company_name}</span>
             )}
-            <div class="text-[10px] font-bold text-slate-500 tracking-[0.3em] uppercase">DRONES AGRÍCOLAS</div>
           </div>
 
           {/* Título Principal */}
@@ -312,7 +311,7 @@ export default function ReportView({ reportId, onBack }) {
         {/* ==========================================
            PÁGINA 5: TESTE DE PH
            ========================================== */}
-        <div class="page-break-before pt-6 space-y-6">
+        <div class="page-break-before pt-6 space-y-6 page-break-inside-avoid">
           <div class="flex items-center justify-between border-b-2 border-slate-100 pb-3">
             <h2 class="text-sm font-black text-slate-800 uppercase tracking-wider">Verificação da Calda e pH</h2>
             {report.company_logo_url && (
@@ -326,7 +325,7 @@ export default function ReportView({ reportId, onBack }) {
             <div class="flex flex-col items-center space-y-4">
               <div class="max-w-md w-full border border-slate-300 p-2 bg-slate-50 rounded-2xl">
                 {report.ph_photo_url ? (
-                  <img src={report.ph_photo_url} alt="Comprovante pH" class="w-full max-h-[350px] object-contain rounded-xl" />
+                  <img src={report.ph_photo_url} alt="Comprovante pH" class="w-full max-h-[300px] object-contain rounded-xl" />
                 ) : (
                   <div class="py-16 text-center text-xs text-slate-400 font-bold border border-dashed border-slate-300 rounded-xl">
                     Nenhuma foto anexada do teste de pH.
@@ -344,7 +343,7 @@ export default function ReportView({ reportId, onBack }) {
            PÁGINAS 6+: MAPAS DE APLICAÇÃO
            ========================================== */}
         {report.maps_data && report.maps_data.map((map, idx) => (
-          <div key={idx} class="page-break-before pt-6 space-y-6">
+          <div key={idx} class="page-break-before pt-6 space-y-6 page-break-inside-avoid">
             <div class="flex items-center justify-between border-b-2 border-slate-100 pb-3">
               <h2 class="text-sm font-black text-slate-800 uppercase tracking-wider">2.4. MAPAS DE APLICAÇÃO</h2>
               {report.company_logo_url && (
@@ -360,7 +359,7 @@ export default function ReportView({ reportId, onBack }) {
 
               <div class="flex justify-center border border-slate-300 p-2 bg-slate-50 rounded-2xl">
                 {map.photo_url ? (
-                  <img src={map.photo_url} alt={`Mapa da área ${idx + 1}`} class="w-full max-h-[450px] object-contain rounded-xl" />
+                  <img src={map.photo_url} alt={`Mapa da área ${idx + 1}`} class="w-full max-h-[350px] object-contain rounded-xl" />
                 ) : (
                   <div class="py-24 text-center text-xs text-slate-400 font-bold border border-dashed border-slate-300 rounded-xl w-full">
                     Mapa de voo não anexado.

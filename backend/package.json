@@ -1,7 +1,7 @@
 {
-  "name": "relatorio-drone-backend",
+  "name": "agroskan-backend",
   "version": "1.0.0",
-  "description": "Backend API para Relatório Drone SaaS",
+  "description": "Backend API para AgroSkan SaaS",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -12,7 +12,6 @@
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "cloudinary": "^2.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",

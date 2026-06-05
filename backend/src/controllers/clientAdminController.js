@@ -1,6 +1,5 @@
 const bcrypt = require('bcryptjs');
 const db = require('../database/db');
-const cloudinary = require('cloudinary').v2;
 
 // Obter dados cadastrais da empresa do administrador logado
 exports.getCompanyDetails = (req, res) => {
@@ -43,24 +42,7 @@ exports.updateCompanyDetails = async (req, res) => {
     // Verificar se há um arquivo de imagem de logo novo
     let logo_url = req.body.logo_url; // Se for string mantida
     if (req.file) {
-      const streamUpload = (fileBuffer) => {
-        return new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
-            { folder: 'relatorio_gama/logos' },
-            (error, result) => {
-              if (result) {
-                resolve(result);
-              } else {
-                reject(error);
-              }
-            }
-          );
-          stream.write(fileBuffer);
-          stream.end();
-        });
-      };
-      const result = await streamUpload(req.file.buffer);
-      logo_url = result.secure_url;
+      logo_url = `/api/uploads/${req.file.filename}`;
     }
 
     db.run(
@@ -153,7 +135,11 @@ exports.createPilot = (req, res) => {
         [username, hashedPassword, companyId, name],
         function(err) {
           if (err) {
-            if (err.message.includes('UNIQUE constraint failed')) {
+            if (
+              err.message.includes('UNIQUE constraint failed') || 
+              err.message.includes('duplicate key') || 
+              err.message.includes('unique constraint')
+            ) {
               return res.status(400).json({ error: 'O nome de usuário já está em uso.' });
             }
             return res.status(500).json({ error: 'Erro ao cadastrar piloto.' });
@@ -173,11 +159,22 @@ exports.deletePilot = (req, res) => {
   const companyId = req.user.company_id;
   const { id } = req.params;
 
+  const pilotId = parseInt(id, 10);
+  if (isNaN(pilotId)) {
+    return res.status(400).json({ error: 'ID de piloto inválido.' });
+  }
+
   db.run(
     `DELETE FROM users WHERE id = ? AND company_id = ? AND role = 'pilot'`,
-    [id, companyId],
+    [pilotId, companyId],
     function(err) {
       if (err) {
+        console.error('Erro ao excluir piloto:', err);
+        if (err.message.includes('foreign key') || err.code === '23503') {
+          return res.status(400).json({ 
+            error: 'Este piloto possui relatórios cadastrados no sistema e não pode ser excluído para preservar o histórico.' 
+          });
+        }
         return res.status(500).json({ error: 'Erro ao excluir piloto.' });
       }
       if (this.changes === 0) {

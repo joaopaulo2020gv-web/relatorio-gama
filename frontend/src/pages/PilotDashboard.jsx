@@ -54,7 +54,7 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport 
             D
           </div>
           <div>
-            <h2 class="text-lg font-bold">Relatório Drone</h2>
+            <h2 class="text-lg font-bold">AgroSkan</h2>
             <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">{user.company_name || 'Empresa'}</p>
           </div>
         </div>
@@ -80,7 +80,7 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport 
         <section class="bg-gradient-to-r from-slate-800 to-slate-800/60 border border-slate-700/40 p-8 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6">
           <div class="space-y-2 text-center md:text-left">
             <h3 class="text-2xl font-black text-white">Olá, {user.name.split(' ')[0]}!</h3>
-            <p class="text-slate-400 font-medium text-sm">Pronto para lançar um novo laudo de pulverização em campo?</p>
+            <p class="text-slate-400 font-medium text-sm">Pronto para lançar um novo relatório de pulverização em campo?</p>
           </div>
           <button
             onClick={onCreateReport}
@@ -105,7 +105,7 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport 
                 <FileText size={28} />
               </div>
               <div class="text-slate-400 font-medium max-w-sm mx-auto">
-                Você ainda não possui relatórios gravados. Clique em "Novo Relatório" para iniciar seu primeiro laudo.
+                Você ainda não possui relatórios gravados. Clique em "Novo Relatório" para iniciar seu primeiro relatório.
               </div>
             </div>
           ) : (

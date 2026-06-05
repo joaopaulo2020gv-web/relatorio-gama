@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Save, Plus, Trash2, Camera, MapPin, Thermometer, Droplet, DollarSign } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Save, Plus, Trash2, Camera, MapPin, Thermometer, Droplet, DollarSign, Calendar } from 'lucide-react';
 
 export default function ReportWizard({ onCancel, onSaveSuccess }) {
   const [step, setStep] = useState(1);
@@ -13,6 +13,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
   // ESTADO DO RELATÓRIO
   // ==========================================
   const [clientName, setClientName] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
   const [farmName, setFarmName] = useState('');
   const [culture, setCulture] = useState('Pastagem');
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
@@ -173,6 +174,19 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
     setCaldas(updated);
   };
 
+  // Função para recalcular o total da calda com base nos ingredientes
+  const recalcCaldaTotal = (calda) => {
+    let totalLiters = 0;
+    calda.ingredients.forEach(ing => {
+      const dosageStr = (ing.dosage || '').replace(',', '.');
+      const match = dosageStr.match(/([\d.]+)\s*L\/ha/i);
+      if (match) {
+        totalLiters += parseFloat(match[1]) || 0;
+      }
+    });
+    return `${totalLiters.toFixed(2).replace('.', ',')} L/ha`;
+  };
+
   const addIngredient = (caldaIndex) => {
     const updated = [...caldas];
     updated[caldaIndex].ingredients.push({ product: '', dosage: '' });
@@ -182,12 +196,16 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
   const removeIngredient = (caldaIndex, ingIndex) => {
     const updated = [...caldas];
     updated[caldaIndex].ingredients = updated[caldaIndex].ingredients.filter((_, i) => i !== ingIndex);
+    updated[caldaIndex].total = recalcCaldaTotal(updated[caldaIndex]);
     setCaldas(updated);
   };
 
   const updateIngredientField = (caldaIndex, ingIndex, field, value) => {
     const updated = [...caldas];
     updated[caldaIndex].ingredients[ingIndex][field] = value;
+    if (field === 'dosage') {
+      updated[caldaIndex].total = recalcCaldaTotal(updated[caldaIndex]);
+    }
     setCaldas(updated);
   };
 
@@ -225,6 +243,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
         body: JSON.stringify({
           client_name: clientName,
           farm_name: farmName,
+          client_email: clientEmail,
           culture,
           report_date: reportDate,
           flights_data: flights,
@@ -265,7 +284,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
         </div>
         <div class="text-center">
           <span class="text-xs text-primary-400 font-bold uppercase tracking-wider">Passo {step} de 6</span>
-          <h2 class="text-sm font-black text-white">Criando Laudo</h2>
+          <h2 class="text-sm font-black text-white">Criando Relatório</h2>
         </div>
         <div>
           <button
@@ -316,7 +335,6 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
               <MapPin class="text-primary-500" size={20} />
               <h3 class="text-lg font-bold">Informações do Cliente & Localização</h3>
             </div>
-            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome do Cliente *</label>
@@ -325,10 +343,23 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
                   required
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
-                  placeholder="Ex: José Setembrino"
+                  placeholder="Ex: Produtor Exemplo"
                   class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                 />
               </div>
+              <div>
+                <label class="block text-slate-300 text-xs font-bold mb-1.5">E-mail do Cliente (Opcional)</label>
+                <input
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  placeholder="Ex: cliente@email.com"
+                  class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome da Fazenda *</label>
                 <input
@@ -336,13 +367,10 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
                   required
                   value={farmName}
                   onChange={(e) => setFarmName(e.target.value)}
-                  placeholder="Ex: Fazenda Sônia"
+                  placeholder="Ex: Fazenda Primavera"
                   class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                 />
               </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label class="block text-slate-300 text-xs font-bold mb-1.5">Cultura / Plantação *</label>
                 <input
@@ -350,19 +378,24 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
                   required
                   value={culture}
                   onChange={(e) => setCulture(e.target.value)}
-                  placeholder="Ex: Pastagem, Soja, Milho"
+                  placeholder="Ex: Soja, Milho, Pastagem"
                   class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                 />
               </div>
               <div>
                 <label class="block text-slate-300 text-xs font-bold mb-1.5">Data do Relatório *</label>
-                <input
-                  type="date"
-                  required
-                  value={reportDate}
-                  onChange={(e) => setReportDate(e.target.value)}
-                  class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
-                />
+                <div class="relative">
+                  <input
+                    type="date"
+                    required
+                    value={reportDate}
+                    onChange={(e) => setReportDate(e.target.value)}
+                    class="w-full pl-4 pr-10 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm text-left appearance-none"
+                  />
+                  <div class="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <Calendar size={16} />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -417,7 +450,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
                           type="date"
                           value={flight.date}
                           onChange={(e) => updateFlightField(idx, 'date', e.target.value)}
-                          class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"
+                          class="w-full px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white text-left appearance-none"
                         />
                       </td>
                       <td class="py-3 px-2">
@@ -488,7 +521,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
                 type="text"
                 value={pilotResponsible}
                 onChange={(e) => setPilotResponsible(e.target.value)}
-                placeholder="Ex: Marcelo e Gabriel (no acompanhamento da calda)"
+                placeholder="Ex: Equipe de campo no acompanhamento"
                 class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
               />
             </div>
@@ -567,7 +600,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
               <textarea
                 value={weatherDesc}
                 onChange={(e) => setWeatherDesc(e.target.value)}
-                placeholder="Ex: As aplicações ficaram dentro dos limites de indicação."
+                placeholder="Ex: As condições climáticas estavam adequadas durante a aplicação."
                 rows="3"
                 class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
               ></textarea>
@@ -608,23 +641,23 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
                     <Trash2 size={16} />
                   </button>
 
-                  <div class="grid grid-cols-2 gap-4 max-w-md">
-                    <div>
+                  <div class="flex flex-wrap gap-4">
+                    <div class="flex-1 min-w-[120px]">
                       <label class="block text-slate-400 text-xs font-bold mb-1">Identificação Calda (ex: DIA 1)</label>
                       <input
                         type="text"
                         value={calda.day}
                         onChange={(e) => updateCaldaDayField(cIdx, 'day', e.target.value)}
-                        class="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white font-bold"
+                        class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white font-bold"
                       />
                     </div>
-                    <div>
+                    <div class="flex-1 min-w-[120px]">
                       <label class="block text-slate-400 text-xs font-bold mb-1">Local (ex: Jaqueira)</label>
                       <input
                         type="text"
                         value={calda.location}
                         onChange={(e) => updateCaldaDayField(cIdx, 'location', e.target.value)}
-                        class="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"
+                        class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"
                       />
                     </div>
                   </div>
@@ -640,14 +673,14 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
                       <div key={iIdx} class="flex items-center space-x-2">
                         <input
                           type="text"
-                          placeholder="Ex: ÁGUA ou Dominux XT"
+                          placeholder="Ex: ÁGUA ou Produto Exemplo"
                           value={ing.product}
                           onChange={(e) => updateIngredientField(cIdx, iIdx, 'product', e.target.value)}
                           class="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"
                         />
                         <input
                           type="text"
-                          placeholder="Ex: 7,43 L/ha"
+                          placeholder="Ex: 10,00 L/ha"
                           value={ing.dosage}
                           onChange={(e) => updateIngredientField(cIdx, iIdx, 'dosage', e.target.value)}
                           class="w-32 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white"
@@ -673,12 +706,9 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
                       </button>
                       <div class="flex items-center space-x-2 text-xs">
                         <span class="text-slate-400">Total calda:</span>
-                        <input
-                          type="text"
-                          value={calda.total}
-                          onChange={(e) => updateCaldaDayField(cIdx, 'total', e.target.value)}
-                          class="w-24 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-center text-xs text-white font-bold"
-                        />
+                        <span class="w-auto px-3 py-1 bg-primary-600/10 border border-primary-500/30 rounded text-center text-xs text-primary-300 font-black">
+                          {calda.total}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -718,7 +748,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
                   <textarea
                     value={phDesc}
                     onChange={(e) => setPhDesc(e.target.value)}
-                    placeholder="Ex: pH após o uso do P51 (redutor de pH): Sem problemas com a calda."
+                    placeholder="Ex: pH medido ideal de acordo com a recomendação técnica."
                     rows="4"
                     class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                   ></textarea>
@@ -793,7 +823,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
                       <textarea
                         value={map.description}
                         onChange={(e) => updateMapField(idx, 'description', e.target.value)}
-                        placeholder="Ex: Área 1 - Manga do Rafa, Grota do Rafa 1, Jaqueira (aplicação dia 07/03/2024)"
+                        placeholder="Ex: Talhão 1, Área Norte, aplicação dia 10/05/2026"
                         rows="3"
                         class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm"
                       ></textarea>
@@ -865,7 +895,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
               <textarea
                 value={observations}
                 onChange={(e) => setObservations(e.target.value)}
-                placeholder="Ex: No dia 12/03/2024, fomos fazer a manga da Sapucaia, mas por motivos de chuvas ocorridas na noite anterior, foi adiado para o dia 14/03/2024."
+                placeholder="Ex: Aplicação suspensa devido a rajadas de vento acima do limite seguro, retomada no dia seguinte."
                 rows="4"
                 class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
               ></textarea>

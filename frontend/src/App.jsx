@@ -64,7 +64,7 @@ export default function App() {
   if (loading) {
     return (
       <div class="min-h-screen bg-slate-900 flex items-center justify-center text-slate-400 font-bold text-sm">
-        Carregando aplicativo Relatório Drone...
+        Carregando aplicativo AgroSkan...
       </div>
     );
   }
@@ -93,9 +93,20 @@ export default function App() {
       return <SuperAdmin onLogout={handleLogout} />;
 
     case 'admin':
+      if (page === 'create-report') {
+        return (
+          <ReportWizard
+            onCancel={() => setPage('dashboard')}
+            onSaveSuccess={() => {
+              setPage('dashboard');
+            }}
+          />
+        );
+      }
       return (
         <ClientAdmin
           onLogout={handleLogout}
+          onCreateReport={() => setPage('create-report')}
           onViewReport={(reportId) => {
             setSelectedReportId(reportId);
             setPage('view-report');

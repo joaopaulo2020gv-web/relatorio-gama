@@ -3,8 +3,23 @@
 @tailwind utilities;
 
 /* Estilos gerais */
+html, body {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.overflow-y-auto, .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
 input, select, textarea {
   transition: all 0.2s ease-in-out;
+}
+
+/* Customização do ícone de calendário nativo para inputs de data */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
 }
 
 input:focus, select:focus, textarea:focus {
@@ -35,6 +50,13 @@ input:focus, select:focus, textarea:focus {
     padding: 0;
   }
 
+  .report-view-container {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    min-height: auto !important;
+  }
+
   .no-print {
     display: none !important;
   }
@@ -47,7 +69,7 @@ input:focus, select:focus, textarea:focus {
     padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
-    background: transparent !important;
+    background: #ffffff !important;
   }
 
   /* Quebras de páginas */
@@ -72,7 +94,7 @@ input:focus, select:focus, textarea:focus {
     margin: 1.5cm 1cm 1.5cm 1cm;
   }
 
-  /* Marca d'água "Relatório Drone" no rodapé impresso */
+  /* Marca d'água "AgroSkan" no rodapé impresso */
   .print-footer {
     position: fixed;
     bottom: -0.5cm;

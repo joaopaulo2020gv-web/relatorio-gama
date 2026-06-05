@@ -12,6 +12,7 @@ exports.createReport = (req, res) => {
   const {
     client_name,
     farm_name,
+    client_email,
     culture,
     report_date,
     flights_data,
@@ -35,16 +36,17 @@ exports.createReport = (req, res) => {
 
   db.run(
     `INSERT INTO reports (
-      pilot_id, company_id, client_name, farm_name, culture, report_date,
+      pilot_id, company_id, client_name, farm_name, client_email, culture, report_date,
       flights_data, weather_temp, weather_humidity, weather_desc, delta_t,
       caldas_data, ph_photo_url, ph_desc, maps_data, observations,
       total_area, price_per_ha, total_price
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       pilotId,
       companyId,
       client_name,
       farm_name,
+      client_email || null,
       culture,
       report_date,
       JSON.stringify(flights_data || []),
@@ -192,36 +194,18 @@ exports.deleteReport = (req, res) => {
   });
 };
 
-const cloudinary = require('cloudinary').v2;
-
-// Lógica de Upload de Imagem individual no Cloudinary
+// Lógica de Upload de Imagem individual (salva no disco local)
 exports.uploadFile = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
   }
 
   try {
-    const streamUpload = (fileBuffer) => {
-      return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: 'relatorio_gama/reports' },
-          (error, result) => {
-            if (result) {
-              resolve(result);
-            } else {
-              reject(error);
-            }
-          }
-        );
-        stream.write(fileBuffer);
-        stream.end();
-      });
-    };
-
-    const result = await streamUpload(req.file.buffer);
-    return res.json({ url: result.secure_url });
+    // O multer diskStorage já salvou o arquivo, basta retornar a URL
+    const fileUrl = `/api/uploads/${req.file.filename}`;
+    return res.json({ url: fileUrl });
   } catch (err) {
-    console.error('Erro ao enviar imagem para o Cloudinary:', err);
+    console.error('Erro ao processar upload da imagem:', err);
     return res.status(500).json({ error: 'Erro ao fazer upload da imagem.' });
   }
 };

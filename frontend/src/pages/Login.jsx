@@ -52,8 +52,8 @@ export default function Login({ onLoginSuccess }) {
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary-600 to-emerald-500 text-white font-extrabold text-2xl mb-4 shadow-lg shadow-primary-500/20">
             D
           </div>
-          <h1 class="text-3xl font-extrabold text-white tracking-tight">Relatório Drone</h1>
-          <p class="text-slate-400 mt-2 font-medium">Gestão de Laudos de Pulverização por Drones</p>
+          <h1 class="text-3xl font-extrabold text-white tracking-tight">AgroSkan</h1>
+          <p class="text-slate-400 mt-2 font-medium">Gestão de Relatórios de Pulverização por Drones</p>
         </div>
 
         {error && (
@@ -102,7 +102,7 @@ export default function Login({ onLoginSuccess }) {
         </form>
 
         <div class="mt-8 text-center text-xs text-slate-500">
-          &copy; {new Date().getFullYear()} Relatório Drone. Todos os direitos reservados.
+          &copy; {new Date().getFullYear()} AgroSkan. Todos os direitos reservados.
         </div>
       </div>
     </div>

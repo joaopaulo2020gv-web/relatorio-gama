@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Save, UserPlus, Users, FileText, Trash2, Eye, Upload } from 'lucide-react';
+import { LogOut, Save, UserPlus, Users, FileText, Trash2, Eye, Upload, Plus, BarChart3, TrendingUp, Award, Activity, DollarSign, Layers } from 'lucide-react';
 
-export default function ClientAdmin({ onLogout, onViewReport }) {
+export default function ClientAdmin({ onLogout, onViewReport, onCreateReport }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const [company, setCompany] = useState({
     name: '', cnpj: '', logo_url: '',
     bank_name: '', bank_agency: '', bank_account: '', bank_owner: '', bank_cpf_pix: '',
@@ -10,7 +11,7 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
   const [pilots, setPilots] = useState([]);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('settings'); // settings, pilots, reports
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, settings, pilots, reports
 
   // Estados dos formulários
   const [logoFile, setLogoFile] = useState(null);
@@ -23,6 +24,12 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
   const [pilotPassword, setPilotPassword] = useState('');
   const [pilotSuccess, setPilotSuccess] = useState('');
   const [pilotError, setPilotError] = useState('');
+
+  const companySlug = (company.name || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .replace(/[^a-z0-9]/g, '');      // remove espaços e caracteres especiais
 
   const headers = { 'Authorization': `Bearer ${localStorage.getItem('gama_token')}` };
 
@@ -128,7 +135,7 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
         },
         body: JSON.stringify({
           name: pilotName,
-          username: pilotUsername,
+          username: `${pilotUsername}@${companySlug}`,
           password: pilotPassword
         })
       });
@@ -159,11 +166,15 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('gama_token')}` }
       });
 
+      const data = await response.json();
       if (response.ok) {
         fetchCompanyData();
+      } else {
+        alert(data.error || 'Erro ao excluir piloto.');
       }
     } catch (err) {
       console.error(err);
+      alert('Erro ao se conectar ao servidor para excluir o piloto.');
     }
   };
 
@@ -186,24 +197,111 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
     }
   };
 
+  // --- Estatísticas do Dashboard ---
+  const totalLaudos = reports.length;
+  const totalArea = reports.reduce((sum, r) => sum + (parseFloat(r.total_area) || 0), 0);
+  const faturamentoTotal = reports.reduce((sum, r) => sum + (parseFloat(r.total_price) || 0), 0);
+  const ticketMedioHa = totalArea > 0 ? (faturamentoTotal / totalArea) : 0;
+
+  // 1. Performance por Piloto
+  const pilotStatsMap = {};
+  reports.forEach(r => {
+    const pilotName = r.pilot_name || 'Desconhecido';
+    if (!pilotStatsMap[pilotName]) {
+      pilotStatsMap[pilotName] = { name: pilotName, area: 0, revenue: 0, count: 0 };
+    }
+    pilotStatsMap[pilotName].area += parseFloat(r.total_area) || 0;
+    pilotStatsMap[pilotName].revenue += parseFloat(r.total_price) || 0;
+    pilotStatsMap[pilotName].count += 1;
+  });
+  const pilotPerformance = Object.values(pilotStatsMap).sort((a, b) => b.area - a.area);
+
+  // 2. Mix de Culturas
+  const cultureStatsMap = {};
+  reports.forEach(r => {
+    const culture = r.culture || 'Outras';
+    if (!cultureStatsMap[culture]) {
+      cultureStatsMap[culture] = { name: culture, area: 0, count: 0 };
+    }
+    cultureStatsMap[culture].area += parseFloat(r.total_area) || 0;
+    cultureStatsMap[culture].count += 1;
+  });
+  const cultureMix = Object.values(cultureStatsMap).sort((a, b) => b.area - a.area);
+
+  // 3. Atividades Recentes
+  const recentReports = [...reports].slice(0, 3);
+
   return (
-    <div class="min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col md:flex-row">
+    <div class="min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col md:flex-row relative">
       
+      {/* Header Mobile */}
+      <header class="md:hidden bg-slate-800 border-b border-slate-700/60 px-5 py-4 flex items-center justify-between sticky top-0 z-40 w-full">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary-600 to-emerald-500 flex items-center justify-center font-extrabold text-white text-base">
+            D
+          </div>
+          <div>
+            <h2 class="text-base font-bold leading-tight">AgroSkan</h2>
+            <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none">Painel Administrativo</p>
+          </div>
+        </div>
+        <button 
+          onClick={() => setMenuOpen(!menuOpen)}
+          class="p-2 text-slate-400 hover:text-white focus:outline-none transition-colors"
+          aria-label="Abrir menu"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {menuOpen ? (
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16" />
+            )}
+          </svg>
+        </button>
+      </header>
+
+      {/* Overlay escuro de fundo no mobile */}
+      {menuOpen && (
+        <div 
+          onClick={() => setMenuOpen(false)}
+          class="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 md:hidden"
+        />
+      )}
+
       {/* Sidebar de Navegação */}
-      <aside class="w-full md:w-64 bg-slate-800 border-r border-slate-700/60 flex flex-col">
+      <aside class={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-800 border-r border-slate-700/60 flex flex-col transform transition-transform duration-300 md:relative md:translate-x-0 ${
+        menuOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
         <div class="p-6 border-b border-slate-700 flex items-center space-x-3">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600 to-emerald-500 flex items-center justify-center font-extrabold text-white text-lg">
             D
           </div>
           <div>
-            <h2 class="text-lg font-bold">Relatório Drone</h2>
+            <h2 class="text-lg font-bold">AgroSkan</h2>
             <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Painel Administrativo</p>
           </div>
         </div>
 
         <nav class="flex-1 p-4 space-y-2">
           <button
-            onClick={() => setActiveTab('settings')}
+            onClick={() => {
+              setActiveTab('dashboard');
+              setMenuOpen(false);
+            }}
+            class={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+              activeTab === 'dashboard' 
+                ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/10' 
+                : 'text-slate-400 hover:bg-slate-700/40 hover:text-white'
+            }`}
+          >
+            <BarChart3 size={18} />
+            <span>Dashboard</span>
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('settings');
+              setMenuOpen(false);
+            }}
             class={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
               activeTab === 'settings' 
                 ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/10' 
@@ -214,7 +312,10 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
             <span>Dados da Empresa</span>
           </button>
           <button
-            onClick={() => setActiveTab('pilots')}
+            onClick={() => {
+              setActiveTab('pilots');
+              setMenuOpen(false);
+            }}
             class={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
               activeTab === 'pilots' 
                 ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/10' 
@@ -225,7 +326,10 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
             <span>Gerenciar Pilotos</span>
           </button>
           <button
-            onClick={() => setActiveTab('reports')}
+            onClick={() => {
+              setActiveTab('reports');
+              setMenuOpen(false);
+            }}
             class={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
               activeTab === 'reports' 
                 ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/10' 
@@ -233,7 +337,17 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
             }`}
           >
             <FileText size={18} />
-            <span>Laudos Emitidos</span>
+            <span>Relatórios Emitidos</span>
+          </button>
+          <button
+            onClick={() => {
+              setMenuOpen(false);
+              onCreateReport();
+            }}
+            class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-400 hover:bg-slate-700/40 hover:text-white transition-all"
+          >
+            <Plus size={18} />
+            <span>Elaborar Relatório</span>
           </button>
         </nav>
 
@@ -249,22 +363,224 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
       </aside>
 
       {/* Main Panel Content */}
-      <main class="flex-1 p-6 overflow-y-auto max-h-screen no-scrollbar">
+      <main class="flex-1 p-6 md:overflow-y-auto md:max-h-screen no-scrollbar">
         
         {loading ? (
           <div class="text-center py-12 text-slate-400">Carregando informações...</div>
         ) : (
           <>
+            {/* ABA: DASHBOARD */}
+            {activeTab === 'dashboard' && (
+              <div class="space-y-6">
+                {/* Cabeçalho */}
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-700/60 pb-4 space-y-3 sm:space-y-0">
+                  <div>
+                    <h3 class="text-xl font-bold">Dashboard de Indicadores</h3>
+                    <p class="text-xs text-slate-400 font-semibold">Visão geral do desempenho e atividades de pulverização da empresa.</p>
+                  </div>
+                  <div>
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-primary-600/20 text-primary-400 border border-primary-500/25">
+                      Atualizado em Tempo Real
+                    </span>
+                  </div>
+                </div>
+
+                {/* Grid de KPIs */}
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Card 1: Faturamento */}
+                  <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
+                    <div class="absolute w-24 h-24 bg-emerald-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-110 transition-transform duration-300"></div>
+                    <div class="space-y-1">
+                      <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Faturamento Total</span>
+                      <div class="text-xl font-black text-emerald-400">
+                        {faturamentoTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </div>
+                      <p class="text-[10px] text-slate-500 font-semibold">Receitas consolidadas</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-md">
+                      <DollarSign size={20} />
+                    </div>
+                  </div>
+
+                  {/* Card 2: Área Aplicada */}
+                  <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
+                    <div class="absolute w-24 h-24 bg-primary-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-110 transition-transform duration-300"></div>
+                    <div class="space-y-1">
+                      <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Área Pulverizada</span>
+                      <div class="text-xl font-black text-white">{totalArea.toFixed(1).replace('.', ',')} ha</div>
+                      <p class="text-[10px] text-slate-500 font-semibold">Total trabalhado</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-400 flex items-center justify-center border border-primary-500/20 shadow-md">
+                      <TrendingUp size={20} />
+                    </div>
+                  </div>
+
+                  {/* Card 3: Total Laudos */}
+                  <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
+                    <div class="absolute w-24 h-24 bg-blue-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-110 transition-transform duration-300"></div>
+                    <div class="space-y-1">
+                      <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Relatórios Emitidos</span>
+                      <div class="text-xl font-black text-white">{totalLaudos}</div>
+                      <p class="text-[10px] text-slate-500 font-semibold">Documentos gerados</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/20 shadow-md">
+                      <FileText size={20} />
+                    </div>
+                  </div>
+
+                  {/* Card 4: Ticket Médio / ha */}
+                  <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
+                    <div class="absolute w-24 h-24 bg-amber-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-110 transition-transform duration-300"></div>
+                    <div class="space-y-1">
+                      <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Valor Médio / ha</span>
+                      <div class="text-xl font-black text-amber-400">
+                        {ticketMedioHa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </div>
+                      <p class="text-[10px] text-slate-500 font-semibold">Valor médio por hectare</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20 shadow-md">
+                      <Activity size={20} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Conteúdo Secundário: Rankings de Performance */}
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  
+                  {/* Desempenho por Piloto */}
+                  <div class="lg:col-span-2 bg-slate-800 border border-slate-700/40 p-6 rounded-2xl space-y-4">
+                    <h4 class="text-sm font-bold text-primary-400 border-b border-slate-700/60 pb-1.5 uppercase tracking-wider flex items-center space-x-2">
+                      <Award size={16} />
+                      <span>Desempenho por Piloto</span>
+                    </h4>
+                    
+                    {pilotPerformance.length === 0 ? (
+                      <div class="p-8 text-center text-slate-500 text-xs">Sem dados de aplicação de pilotos ainda.</div>
+                    ) : (
+                      <div class="space-y-4 pt-1">
+                        {pilotPerformance.map((item, idx) => {
+                          const maxArea = Math.max(...pilotPerformance.map(p => p.area));
+                          const percent = maxArea > 0 ? (item.area / maxArea) * 100 : 0;
+                          return (
+                            <div key={idx} class="space-y-1.5">
+                              <div class="flex justify-between items-center text-xs font-bold">
+                                <span class="text-white flex items-center space-x-1.5">
+                                  <span class="w-5 h-5 rounded-md bg-slate-900 border border-slate-700 text-[10px] flex items-center justify-center text-slate-400">{idx + 1}</span>
+                                  <span>{item.name}</span>
+                                </span>
+                                <span class="text-slate-300 font-black">{item.area.toFixed(1).replace('.', ',')} ha <span class="text-slate-500">|</span> <span class="text-emerald-400">{item.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></span>
+                              </div>
+                              <div class="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                                <div class="h-full bg-gradient-to-r from-primary-600 to-emerald-500 rounded-full" style={{ width: `${percent}%` }}></div>
+                              </div>
+                              <div class="text-[9px] text-slate-500 font-semibold">{item.count} relatório(s) gerado(s)</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mix de Culturas */}
+                  <div class="lg:col-span-1 bg-slate-800 border border-slate-700/40 p-6 rounded-2xl space-y-4">
+                    <h4 class="text-sm font-bold text-primary-400 border-b border-slate-700/60 pb-1.5 uppercase tracking-wider flex items-center space-x-2">
+                      <Layers size={16} />
+                      <span>Mix de Culturas (ha)</span>
+                    </h4>
+
+                    {cultureMix.length === 0 ? (
+                      <div class="p-8 text-center text-slate-500 text-xs">Sem dados de culturas ainda.</div>
+                    ) : (
+                      <div class="space-y-4 pt-1">
+                        {cultureMix.map((item, idx) => {
+                          const totalMixArea = cultureMix.reduce((sum, c) => sum + c.area, 0);
+                          const percent = totalMixArea > 0 ? (item.area / totalMixArea) * 100 : 0;
+                          return (
+                            <div key={idx} class="space-y-1.5">
+                              <div class="flex justify-between items-center text-xs">
+                                <span class="text-white font-bold">{item.name}</span>
+                                <span class="text-slate-300 font-bold">{item.area.toFixed(1).replace('.', ',')} ha ({percent.toFixed(0)}%)</span>
+                              </div>
+                              <div class="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                                <div class="h-full bg-primary-500 rounded-full" style={{ width: `${percent}%` }}></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Laudos Recentes */}
+                <div class="bg-slate-800 border border-slate-700/40 rounded-2xl overflow-hidden">
+                  <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
+                    <h4 class="text-sm font-bold text-primary-400 uppercase tracking-wider flex items-center space-x-2">
+                      <FileText size={16} />
+                      <span>Relatórios Recentes</span>
+                    </h4>
+                    <button
+                      onClick={() => setActiveTab('reports')}
+                      class="text-[10px] text-primary-400 hover:text-primary-300 font-extrabold uppercase tracking-wider"
+                    >
+                      Ver Todos →
+                    </button>
+                  </div>
+                  
+                  {recentReports.length === 0 ? (
+                    <div class="p-12 text-center text-slate-500 text-xs font-semibold">Nenhum relatório emitido até o momento.</div>
+                  ) : (
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left border-collapse">
+                        <thead>
+                          <tr class="bg-slate-900/40 text-slate-400 text-[10px] font-bold uppercase border-b border-slate-700">
+                            <th class="px-6 py-3">Cliente / Fazenda</th>
+                            <th class="px-6 py-3">Data</th>
+                            <th class="px-6 py-3">Área</th>
+                            <th class="px-6 py-3">Valor</th>
+                            <th class="px-6 py-3 text-center">Ação</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-700/40 text-xs font-semibold text-slate-300">
+                          {recentReports.map(r => (
+                            <tr key={r.id} class="hover:bg-slate-700/10">
+                              <td class="px-6 py-3">
+                                <div class="font-bold text-white">{r.client_name}</div>
+                                <div class="text-[10px] text-slate-500 font-semibold">{r.farm_name}</div>
+                              </td>
+                              <td class="px-6 py-3">{new Date(r.report_date).toLocaleDateString('pt-BR')}</td>
+                              <td class="px-6 py-3 font-bold">{r.total_area} ha</td>
+                              <td class="px-6 py-3 text-emerald-400 font-black">
+                                {r.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </td>
+                              <td class="px-6 py-3 text-center">
+                                <button
+                                  onClick={() => onViewReport(r.id)}
+                                  class="px-2.5 py-1 text-[10px] font-bold bg-slate-950/20 hover:bg-primary-600 border border-slate-700 hover:border-primary-500 rounded-lg text-primary-400 hover:text-white transition-all"
+                                >
+                                  Ver Relatório
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* ABA: DADOS DA EMPRESA */}
             {activeTab === 'settings' && (
               <div class="max-w-3xl space-y-6">
-                <div class="flex items-center justify-between border-b border-slate-700/60 pb-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-700/60 pb-4 space-y-3 sm:space-y-0">
                   <div>
                     <h3 class="text-xl font-bold">Configuração da Empresa</h3>
                     <p class="text-xs text-slate-400 font-semibold">Esses dados serão automaticamente inclusos em todos os relatórios finais.</p>
                   </div>
-                  <div class="text-right">
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-primary-600/20 text-primary-400 border border-primary-500/25">
+                  <div class="sm:text-right">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-primary-600/20 text-primary-400 border border-primary-500/25 whitespace-nowrap">
                       Plano {company.plan_name}
                     </span>
                   </div>
@@ -304,7 +620,7 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
                             required
                             value={company.name}
                             onChange={(e) => setCompany({ ...company, name: e.target.value })}
-                            placeholder="Ex: SkyAgro Drones Agrícolas"
+                            placeholder="Ex: Nome da Empresa"
                             class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                           />
                         </div>
@@ -333,7 +649,7 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
                           type="text"
                           value={company.bank_name || ''}
                           onChange={(e) => setCompany({ ...company, bank_name: e.target.value })}
-                          placeholder="Ex: Banco Bradesco"
+                          placeholder="Ex: Nome do Banco"
                           class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                         />
                       </div>
@@ -344,7 +660,7 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
                             type="text"
                             value={company.bank_agency || ''}
                             onChange={(e) => setCompany({ ...company, bank_agency: e.target.value })}
-                            placeholder="Ex: 0396-4"
+                            placeholder="Ex: 0000-0"
                             class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                           />
                         </div>
@@ -354,7 +670,7 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
                             type="text"
                             value={company.bank_account || ''}
                             onChange={(e) => setCompany({ ...company, bank_account: e.target.value })}
-                            placeholder="Ex: 0352829-4"
+                            placeholder="Ex: 0000000-0"
                             class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                           />
                         </div>
@@ -368,7 +684,7 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
                           type="text"
                           value={company.bank_owner || ''}
                           onChange={(e) => setCompany({ ...company, bank_owner: e.target.value })}
-                          placeholder="Ex: Marcelo Sgarbi Dias"
+                          placeholder="Ex: Nome do Titular"
                           class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                         />
                       </div>
@@ -378,7 +694,7 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
                           type="text"
                           value={company.bank_cpf_pix || ''}
                           onChange={(e) => setCompany({ ...company, bank_cpf_pix: e.target.value })}
-                          placeholder="Ex: 034.589.306-98"
+                          placeholder="Ex: Chave Pix ou CPF"
                           class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                         />
                       </div>
@@ -417,20 +733,28 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
                         required
                         value={pilotName}
                         onChange={(e) => setPilotName(e.target.value)}
-                        placeholder="Ex: Gabriel Silva"
+                        placeholder="Ex: Nome do Piloto"
                         class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                       />
                     </div>
                     <div>
                       <label class="block text-slate-300 text-xs font-bold mb-1">Usuário de Acesso *</label>
-                      <input
-                        type="text"
-                        required
-                        value={pilotUsername}
-                        onChange={(e) => setPilotUsername(e.target.value)}
-                        placeholder="Ex: gabriel.piloto"
-                        class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
-                      />
+                      <div class="flex rounded-xl border border-slate-700 bg-slate-900 overflow-hidden focus-within:border-primary-500 transition-all">
+                        <input
+                          type="text"
+                          required
+                          value={pilotUsername}
+                          onChange={(e) => setPilotUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))}
+                          placeholder="Ex: joao"
+                          class="flex-1 px-4 py-2 bg-transparent text-white focus:outline-none font-medium text-sm border-none"
+                        />
+                        <span class="px-3 py-2 bg-slate-800 text-slate-400 font-bold text-xs flex items-center border-l border-slate-700/60 select-none">
+                          @{companySlug || 'empresa'}
+                        </span>
+                      </div>
+                      <p class="text-[10px] text-slate-500 mt-1 font-semibold">
+                        O login do piloto será: <strong class="text-slate-400">{pilotUsername || 'usuario'}@{companySlug || 'empresa'}</strong>
+                      </p>
                     </div>
                     <div>
                       <label class="block text-slate-300 text-xs font-bold mb-1">Senha Inicial *</label>
@@ -498,12 +822,26 @@ export default function ClientAdmin({ onLogout, onViewReport }) {
             {/* ABA: LAUDOS EMITIDOS */}
             {activeTab === 'reports' && (
               <div class="bg-slate-800 border border-slate-700/40 rounded-2xl overflow-hidden">
-                <div class="px-6 py-5 border-b border-slate-700">
+                <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between flex-wrap gap-4">
                   <h3 class="text-lg font-bold">Histórico de Relatórios da Empresa</h3>
+                  <button
+                    onClick={onCreateReport}
+                    class="flex items-center space-x-1.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all"
+                  >
+                    <span>Elaborar Relatório</span>
+                  </button>
                 </div>
 
                 {reports.length === 0 ? (
-                  <div class="p-12 text-center text-slate-400">Nenhum relatório foi gerado por seus pilotos ainda.</div>
+                  <div class="p-12 text-center text-slate-400 space-y-4">
+                    <p>Nenhum relatório foi gerado por seus pilotos ainda.</p>
+                    <button
+                      onClick={onCreateReport}
+                      class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white font-bold rounded-xl text-xs transition-all"
+                    >
+                      Elaborar Primeiro Relatório
+                    </button>
+                  </div>
                 ) : (
                   <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">

@@ -225,14 +225,16 @@ exports.listPlans = (req, res) => {
 
 // Criar um novo plano
 exports.createPlan = (req, res) => {
-  const { name, description } = req.body;
+  const { name, description, max_devices } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'O nome do plano é obrigatório.' });
   }
 
+  const limit = parseInt(max_devices, 10) || 1;
+
   db.run(
-    `INSERT INTO plans (name, description) VALUES (?, ?)`,
-    [name, description || ''],
+    `INSERT INTO plans (name, description, max_devices) VALUES (?, ?, ?)`,
+    [name, description || '', limit],
     function (err) {
       if (err) {
         if (err.message.includes('unique constraint') || err.message.includes('UNIQUE constraint') || err.message.includes('plans_name_key')) {
@@ -248,10 +250,12 @@ exports.createPlan = (req, res) => {
 // Editar um plano existente
 exports.updatePlan = async (req, res) => {
   const { id } = req.params;
-  const { name, description } = req.body;
+  const { name, description, max_devices } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'O nome do plano é obrigatório.' });
   }
+
+  const limit = parseInt(max_devices, 10) || 1;
 
   const client = await db.pool.connect();
   try {
@@ -267,8 +271,8 @@ exports.updatePlan = async (req, res) => {
 
     // Atualizar a tabela de planos
     await client.query(
-      `UPDATE plans SET name = $1, description = $2 WHERE id = $3`,
-      [name, description || '', id]
+      `UPDATE plans SET name = $1, description = $2, max_devices = $3 WHERE id = $4`,
+      [name, description || '', limit, id]
     );
 
     // Se o nome mudou, atualizar a tabela de empresas que usavam este plano
@@ -330,5 +334,47 @@ exports.deletePlan = async (req, res) => {
     return res.status(500).json({ error: 'Erro ao excluir plano.' });
   } finally {
     client.release();
+  }
+};
+
+// Atualizar usuário e senha do próprio SuperAdmin
+exports.updateSuperAdminProfile = (req, res) => {
+  const { id } = req.user;
+  const { username, password, name } = req.body;
+
+  if (!username || !name) {
+    return res.status(400).json({ error: 'Usuário e Nome são obrigatórios.' });
+  }
+
+  if (password && password.trim() !== '') {
+    const salt = bcrypt.genSaltSync(10);
+    const hashedPassword = bcrypt.hashSync(password, salt);
+    db.run(
+      `UPDATE users SET username = ?, password = ?, name = ? WHERE id = ? AND role = 'superadmin'`,
+      [username, hashedPassword, name, id],
+      function(err) {
+        if (err) {
+          if (err.message.includes('unique constraint') || err.message.includes('UNIQUE constraint') || err.message.includes('users_username_key')) {
+            return res.status(400).json({ error: 'O nome de usuário já está em uso.' });
+          }
+          return res.status(500).json({ error: 'Erro ao atualizar credenciais do SuperAdmin.' });
+        }
+        return res.json({ message: 'Credenciais do SuperAdmin atualizadas com sucesso!' });
+      }
+    );
+  } else {
+    db.run(
+      `UPDATE users SET username = ?, name = ? WHERE id = ? AND role = 'superadmin'`,
+      [username, name, id],
+      function(err) {
+        if (err) {
+          if (err.message.includes('unique constraint') || err.message.includes('UNIQUE constraint') || err.message.includes('users_username_key')) {
+            return res.status(400).json({ error: 'O nome de usuário já está em uso.' });
+          }
+          return res.status(500).json({ error: 'Erro ao atualizar credenciais do SuperAdmin.' });
+        }
+        return res.json({ message: 'Credenciais do SuperAdmin atualizadas com sucesso!' });
+      }
+    );
   }
 };

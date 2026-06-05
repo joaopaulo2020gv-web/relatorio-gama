@@ -12,11 +12,12 @@ exports.login = (req, res) => {
     return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
   }
 
-  // Buscar usuário no banco
+  // Buscar usuário no banco junto com o limite de conexões do plano da empresa
   db.get(
-    `SELECT u.*, c.name as company_name, c.plan_status, c.logo_url 
+    `SELECT u.*, c.name as company_name, c.plan_status, c.logo_url, p.max_devices 
      FROM users u 
      LEFT JOIN companies c ON u.company_id = c.id 
+     LEFT JOIN plans p ON c.plan_name = p.name
      WHERE u.username = ?`,
     [username],
     (err, user) => {
@@ -38,36 +39,110 @@ exports.login = (req, res) => {
       if (user.role !== 'superadmin') {
         if (!user.plan_status || user.plan_status !== 'active') {
           return res.status(403).json({ 
-            error: 'O acesso da sua empresa está suspenso ou inativo. Entre em contato com o suporte do Relatório Drone.' 
+            error: 'O acesso da sua empresa está suspenso ou inativo. Entre em contato com o suporte do AgroSkan.' 
           });
         }
       }
 
-      // Gerar token JWT
-      const token = jwt.sign(
-        { 
-          id: user.id, 
-          username: user.username, 
-          role: user.role, 
-          company_id: user.company_id,
-          name: user.name 
-        },
-        JWT_SECRET,
-        { expiresIn: '30d' } // Token expira em 30 dias para facilidade no campo
-      );
+      // Se for SuperAdmin, não há limite de dispositivos
+      if (user.role === 'superadmin') {
+        const token = jwt.sign(
+          { 
+            id: user.id, 
+            username: user.username, 
+            role: user.role, 
+            company_id: user.company_id,
+            name: user.name 
+          },
+          JWT_SECRET,
+          { expiresIn: '30d' }
+        );
 
-      return res.json({
-        token,
-        user: {
-          id: user.id,
-          username: user.username,
-          role: user.role,
-          company_id: user.company_id,
-          name: user.name,
-          company_name: user.company_name,
-          logo_url: user.logo_url
+        return res.json({
+          token,
+          user: {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            company_id: user.company_id,
+            name: user.name,
+            company_name: user.company_name,
+            logo_url: user.logo_url
+          }
+        });
+      }
+
+      // Lógica de limite de conexões simultâneas para Admin e Pilotos
+      db.all(
+        `SELECT id FROM user_sessions WHERE company_id = ? ORDER BY created_at ASC`,
+        [user.company_id],
+        (sessionErr, sessions) => {
+          if (sessionErr) {
+            return res.status(500).json({ error: 'Erro ao validar sessões de acesso.' });
+          }
+
+          const maxDevices = parseInt(user.max_devices, 10) || 1;
+
+          // Se exceder o limite (usando >= para liberar espaço para a nova sessão)
+          if (sessions.length >= maxDevices) {
+            const toDeleteCount = sessions.length - maxDevices + 1;
+            const toDeleteIds = sessions.slice(0, toDeleteCount).map(s => s.id);
+
+            db.run(
+              `DELETE FROM user_sessions WHERE id IN (${toDeleteIds.join(',')})`,
+              [],
+              (delErr) => {
+                if (delErr) {
+                  console.error('Erro ao remover sessão expirada:', delErr);
+                }
+                insertSessionAndSendToken();
+              }
+            );
+          } else {
+            insertSessionAndSendToken();
+          }
+
+          function insertSessionAndSendToken() {
+            const sessionTokenId = Math.random().toString(36).substring(2) + Date.now().toString(36);
+
+            db.run(
+              `INSERT INTO user_sessions (user_id, company_id, session_token_id) VALUES (?, ?, ?)`,
+              [user.id, user.company_id, sessionTokenId],
+              (insErr) => {
+                if (insErr) {
+                  return res.status(500).json({ error: 'Erro ao criar sessão de acesso.' });
+                }
+
+                const token = jwt.sign(
+                  { 
+                    id: user.id, 
+                    username: user.username, 
+                    role: user.role, 
+                    company_id: user.company_id,
+                    name: user.name,
+                    session_token_id: sessionTokenId
+                  },
+                  JWT_SECRET,
+                  { expiresIn: '30d' }
+                );
+
+                return res.json({
+                  token,
+                  user: {
+                    id: user.id,
+                    username: user.username,
+                    role: user.role,
+                    company_id: user.company_id,
+                    name: user.name,
+                    company_name: user.company_name,
+                    logo_url: user.logo_url
+                  }
+                });
+              }
+            );
+          }
         }
-      });
+      );
     }
   );
 };

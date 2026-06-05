@@ -11,18 +11,24 @@ async function initPg(pool) {
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL UNIQUE,
         description TEXT,
+        max_devices INTEGER DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     console.log('Tabela "plans" verificada/criada.');
 
+    // Executar migração de coluna max_devices na tabela plans se ela já existe
+    await client.query(`
+      ALTER TABLE plans ADD COLUMN IF NOT EXISTS max_devices INTEGER DEFAULT 1;
+    `);
+
     // Inicializar planos padrões se a tabela estiver vazia
     const checkPlans = await client.query("SELECT COUNT(*) as count FROM plans");
     if (parseInt(checkPlans.rows[0].count, 10) === 0) {
       await client.query(`
-        INSERT INTO plans (name, description) VALUES 
-        ('Básico', 'Até 3 pilotos'),
-        ('Pro', 'Ilimitados')
+        INSERT INTO plans (name, description, max_devices) VALUES 
+        ('Básico', 'Até 3 pilotos', 1),
+        ('Pro', 'Ilimitados', 999)
       `);
       console.log('Planos padrões "Básico" e "Pro" criados com sucesso!');
     }
@@ -61,6 +67,18 @@ async function initPg(pool) {
     `);
     console.log('Tabela "users" verificada/criada.');
 
+    // 2.1. Tabela de Sessões Ativas (PWA / Limite de conexões)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        session_token_id TEXT NOT NULL UNIQUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Tabela "user_sessions" verificada/criada.');
+
     // 3. Tabela de Relatórios
     await client.query(`
       CREATE TABLE IF NOT EXISTS reports (
@@ -69,6 +87,7 @@ async function initPg(pool) {
         company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
         client_name TEXT NOT NULL,
         farm_name TEXT NOT NULL,
+        client_email TEXT,
         culture TEXT NOT NULL,
         report_date TEXT NOT NULL,
         flights_data TEXT, 
@@ -88,6 +107,12 @@ async function initPg(pool) {
       )
     `);
     console.log('Tabela "reports" verificada/criada.');
+
+    // Executar migração de coluna client_email na tabela reports se ela já existe
+    await client.query(`
+      ALTER TABLE reports ADD COLUMN IF NOT EXISTS client_email TEXT;
+    `);
+    console.log('Coluna "client_email" verificada/criada na tabela "reports".');
 
     // 4. Inserir SuperAdmin padrão se não existir
     const checkRes = await client.query("SELECT COUNT(*) as count FROM users WHERE role = 'superadmin'");

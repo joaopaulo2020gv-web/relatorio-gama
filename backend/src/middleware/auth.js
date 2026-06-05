@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const db = require('../database/db');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'gama_super_secret_jwt_key_2026_drones';
@@ -16,8 +17,26 @@ const authenticateToken = (req, res, next) => {
     if (err) {
       return res.status(403).json({ error: 'Token inválido ou expirado.' });
     }
-    req.user = user;
-    next();
+
+    // Se tiver session_token_id (não é superadmin), verificar se a sessão ainda está ativa
+    if (user.session_token_id) {
+      db.get(
+        `SELECT id FROM user_sessions WHERE session_token_id = ?`,
+        [user.session_token_id],
+        (sessionErr, session) => {
+          if (sessionErr || !session) {
+            return res.status(401).json({ 
+              error: 'Sessão encerrada. Este dispositivo foi desconectado porque outro aparelho realizou login nesta conta.' 
+            });
+          }
+          req.user = user;
+          next();
+        }
+      );
+    } else {
+      req.user = user;
+      next();
+    }
   });
 };
 

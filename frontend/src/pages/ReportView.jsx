@@ -26,7 +26,7 @@ export default function ReportView({ reportId, onBack }) {
   }, [reportId]);
 
   if (loading) {
-    return <div class="text-center py-12 text-slate-400 no-print">Carregando visualização do laudo...</div>;
+    return <div class="text-center py-12 text-slate-400 no-print">Carregando visualização do relatório...</div>;
   }
 
   if (!report) {
@@ -37,7 +37,7 @@ export default function ReportView({ reportId, onBack }) {
   const pilotResponsible = report.pilot_name;
 
   return (
-    <div class="min-h-screen bg-slate-900 md:p-6 text-slate-900 font-sans">
+    <div class="report-view-container min-h-screen bg-slate-900 md:p-6 text-slate-900 font-sans">
       
       {/* Botões do Topo (Escondidos na Impressão) */}
       <div class="max-w-4xl mx-auto mb-6 px-4 flex items-center justify-between no-print">
@@ -93,6 +93,9 @@ export default function ReportView({ reportId, onBack }) {
           {/* Dados do Cliente e Assinatura */}
           <div class="border-t border-slate-200 pt-6 mt-16 text-xs text-slate-700 font-semibold space-y-1.5">
             <div>CLIENTE: <span class="text-slate-900 font-bold uppercase">{report.client_name} - FAZENDA {report.farm_name}</span></div>
+            {report.client_email && (
+              <div>E-MAIL: <span class="text-slate-900 font-bold">{report.client_email}</span></div>
+            )}
             <div>DATA: <span class="text-slate-900 font-bold">{new Date(report.report_date).toLocaleDateString('pt-BR')}</span></div>
           </div>
         </div>
@@ -118,6 +121,9 @@ export default function ReportView({ reportId, onBack }) {
               <thead>
                 <tr class="bg-slate-100 font-bold text-slate-700">
                   <th class="border border-slate-300 px-3 py-2">RESPONSÁVEL</th>
+                  {report.client_email && (
+                    <th class="border border-slate-300 px-3 py-2">E-MAIL</th>
+                  )}
                   <th class="border border-slate-300 px-3 py-2">FAZENDA</th>
                   <th class="border border-slate-300 px-3 py-2">CULTURA</th>
                 </tr>
@@ -125,6 +131,9 @@ export default function ReportView({ reportId, onBack }) {
               <tbody>
                 <tr class="text-slate-800">
                   <td class="border border-slate-300 px-3 py-2 uppercase">{report.client_name}</td>
+                  {report.client_email && (
+                    <td class="border border-slate-300 px-3 py-2">{report.client_email}</td>
+                  )}
                   <td class="border border-slate-300 px-3 py-2 uppercase">Fazenda {report.farm_name}</td>
                   <td class="border border-slate-300 px-3 py-2 uppercase">{report.culture}</td>
                 </tr>
@@ -351,7 +360,7 @@ export default function ReportView({ reportId, onBack }) {
         <div class="page-break-before pt-6 space-y-6 flex-1 flex flex-col justify-between">
           <div class="space-y-6">
             <div class="flex items-center justify-between border-b-2 border-slate-100 pb-3">
-              <h2 class="text-sm font-black text-slate-800 uppercase tracking-wider">Fechamento de Laudo</h2>
+              <h2 class="text-sm font-black text-slate-800 uppercase tracking-wider">Fechamento de Relatório</h2>
               {report.company_logo_url && (
                 <img src={report.company_logo_url} alt="Logo" class="h-8 max-w-[100px] object-contain" />
               )}
@@ -405,7 +414,7 @@ export default function ReportView({ reportId, onBack }) {
 
           {/* Rodapé impresso (Marca d'água) */}
           <div class="print-footer text-center pt-4 text-[10px] text-slate-400 font-medium border-t border-slate-100 mt-16">
-            Gerado por <strong>Relatório Drone</strong> - www.relatoriodrone.com.br
+            Gerado por <strong>AgroSkan</strong> - www.agroskan.com
           </div>
         </div>
 

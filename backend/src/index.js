@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
+const crypto = require('crypto');
 require('dotenv').config();
 
 const db = require('./database/db');
@@ -20,15 +20,26 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Configurar Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
+// Diretório de uploads persistente
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
 
-// Configurar armazenamento do Multer em memória
-const storage = multer.memoryStorage();
+// Servir arquivos de upload como estáticos
+app.use('/api/uploads', express.static(UPLOADS_DIR));
+
+// Configurar armazenamento do Multer em disco
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, UPLOADS_DIR);
+  },
+  filename: (req, file, cb) => {
+    const uniqueId = crypto.randomBytes(12).toString('hex');
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `${uniqueId}${ext}`);
+  }
+});
 
 const upload = multer({
   storage: storage,
@@ -40,7 +51,7 @@ const upload = multer({
       cb(new Error('Tipo de arquivo não suportado. Envie apenas JPG, PNG ou WEBP.'));
     }
   },
-  limits: { fileSize: 5 * 1024 * 1024 } // limite de 5MB
+  limits: { fileSize: 10 * 1024 * 1024 } // limite de 10MB
 });
 
 // ==========================================
@@ -76,6 +87,11 @@ app.get('/api/super/stats',
   auth.authenticateToken, 
   auth.requireSuperAdmin, 
   superAdminController.getSystemStats
+);
+app.put('/api/super/profile', 
+  auth.authenticateToken, 
+  auth.requireSuperAdmin, 
+  superAdminController.updateSuperAdminProfile
 );
 
 app.get('/api/super/plans', 
@@ -159,7 +175,7 @@ app.post('/api/reports/upload',
 
 // Rota padrão de verificação de status
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'API do Relatório Drone funcionando!' });
+  res.json({ status: 'OK', message: 'API do AgroSkan funcionando!' });
 });
 
 // Inicialização do servidor (condicional para local ou serverless)

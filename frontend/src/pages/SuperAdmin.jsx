@@ -28,8 +28,17 @@ export default function SuperAdmin({ onLogout }) {
   const [editingPlan, setEditingPlan] = useState(null);
   const [planNameInput, setPlanNameInput] = useState('');
   const [planDescriptionInput, setPlanDescriptionInput] = useState('');
+  const [planMaxDevicesInput, setPlanMaxDevicesInput] = useState(1);
   const [planFormError, setPlanFormError] = useState('');
   const [planFormSuccess, setPlanFormSuccess] = useState('');
+
+  // Campos do perfil do SuperAdmin
+  const [profileName, setProfileName] = useState('');
+  const [profileUsername, setProfileUsername] = useState('');
+  const [profilePassword, setProfilePassword] = useState('');
+  const [profileConfirmPassword, setProfileConfirmPassword] = useState('');
+  const [profileError, setProfileError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
 
   const fetchStatsAndCompanies = async () => {
     try {
@@ -46,6 +55,13 @@ export default function SuperAdmin({ onLogout }) {
       const plansRes = await fetch('/api/super/plans', { headers });
       const plansData = await plansRes.json();
       if (plansRes.ok) setPlans(plansData.plans || []);
+
+      const userRes = await fetch('/api/auth/me', { headers });
+      const userData = await userRes.json();
+      if (userRes.ok && userData.user) {
+        setProfileName(userData.user.name || '');
+        setProfileUsername(userData.user.username || '');
+      }
 
     } catch (err) {
       console.error('Erro ao buscar dados:', err);
@@ -224,6 +240,7 @@ export default function SuperAdmin({ onLogout }) {
     setEditingPlan(null);
     setPlanNameInput('');
     setPlanDescriptionInput('');
+    setPlanMaxDevicesInput(1);
     setPlanFormError('');
     setPlanFormSuccess('');
     setPlanModalOpen(true);
@@ -233,6 +250,7 @@ export default function SuperAdmin({ onLogout }) {
     setEditingPlan(plan);
     setPlanNameInput(plan.name);
     setPlanDescriptionInput(plan.description || '');
+    setPlanMaxDevicesInput(plan.max_devices || 1);
     setPlanFormError('');
     setPlanFormSuccess('');
     setPlanModalOpen(true);
@@ -262,7 +280,8 @@ export default function SuperAdmin({ onLogout }) {
         },
         body: JSON.stringify({
           name: planNameInput,
-          description: planDescriptionInput
+          description: planDescriptionInput,
+          max_devices: planMaxDevicesInput
         })
       });
 
@@ -276,6 +295,7 @@ export default function SuperAdmin({ onLogout }) {
       if (!editingPlan) {
         setPlanNameInput('');
         setPlanDescriptionInput('');
+        setPlanMaxDevicesInput(1);
       }
 
       fetchStatsAndCompanies();
@@ -309,6 +329,50 @@ export default function SuperAdmin({ onLogout }) {
     }
   };
 
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setProfileError('');
+    setProfileSuccess('');
+
+    if (!profileName.trim() || !profileUsername.trim()) {
+      setProfileError('Nome e Usuário são obrigatórios.');
+      return;
+    }
+
+    if (profilePassword && profilePassword !== profileConfirmPassword) {
+      setProfileError('As senhas não coincidem.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/super/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('gama_token')}`
+        },
+        body: JSON.stringify({
+          name: profileName,
+          username: profileUsername,
+          password: profilePassword
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao atualizar perfil.');
+      }
+
+      setProfileSuccess('Perfil atualizado com sucesso!');
+      setProfilePassword('');
+      setProfileConfirmPassword('');
+      
+      fetchStatsAndCompanies();
+    } catch (err) {
+      setProfileError(err.message);
+    }
+  };
+
   return (
     <div class="min-h-screen bg-slate-900 text-slate-100 font-sans">
       {/* Header */}
@@ -318,7 +382,7 @@ export default function SuperAdmin({ onLogout }) {
             D
           </div>
           <div>
-            <h2 class="text-xl font-bold">Relatório Drone</h2>
+            <h2 class="text-xl font-bold">AgroSkan</h2>
             <p class="text-xs text-slate-400 font-semibold">Painel Geral do Super Administrador</p>
           </div>
         </div>
@@ -368,7 +432,7 @@ export default function SuperAdmin({ onLogout }) {
               <FileText size={24} />
             </div>
             <div>
-              <p class="text-sm font-medium text-slate-400">Laudos Emitidos</p>
+              <p class="text-sm font-medium text-slate-400">Relatórios Emitidos</p>
               <h3 class="text-2xl font-black">{stats.total_reports}</h3>
             </div>
           </div>
@@ -395,6 +459,16 @@ export default function SuperAdmin({ onLogout }) {
             }`}
           >
             Planos de Assinatura
+          </button>
+          <button
+            onClick={() => setActiveTab('profile')}
+            class={`pb-4 text-sm font-bold border-b-2 transition-all duration-200 ${
+              activeTab === 'profile' 
+                ? 'border-primary-500 text-primary-400' 
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Minha Conta
           </button>
         </div>
 
@@ -425,7 +499,7 @@ export default function SuperAdmin({ onLogout }) {
                       <th class="px-6 py-4">Plano</th>
                       <th class="px-6 py-4">Vencimento</th>
                       <th class="px-6 py-4">Pilotos</th>
-                      <th class="px-6 py-4">Laudos</th>
+                      <th class="px-6 py-4">Relatórios</th>
                       <th class="px-6 py-4 text-center">Status</th>
                       <th class="px-6 py-4 text-center">Ações</th>
                     </tr>
@@ -494,7 +568,7 @@ export default function SuperAdmin({ onLogout }) {
               </div>
             )}
           </section>
-        ) : (
+        ) : activeTab === 'plans' ? (
           /* Plans List */
           <section class="bg-slate-800 border border-slate-700/50 rounded-2xl overflow-hidden animate-fadeIn">
             <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between">
@@ -560,6 +634,86 @@ export default function SuperAdmin({ onLogout }) {
               </div>
             )}
           </section>
+        ) : (
+          /* Profile Section */
+          <section class="max-w-xl mx-auto bg-slate-800 border border-slate-700/50 rounded-2xl overflow-hidden animate-fadeIn">
+            <div class="px-6 py-5 border-b border-slate-700">
+              <h3 class="text-lg font-bold">Configurações da Conta</h3>
+              <p class="text-xs text-slate-400 font-semibold mt-0.5">Altere suas credenciais de acesso SuperAdmin</p>
+            </div>
+            
+            <form onSubmit={handleUpdateProfile} class="p-6 space-y-6">
+              {profileError && (
+                <div class="bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl text-sm">
+                  {profileError}
+                </div>
+              )}
+              {profileSuccess && (
+                <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-200 px-4 py-3 rounded-xl text-sm">
+                  {profileSuccess}
+                </div>
+              )}
+
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome Completo *</label>
+                  <input
+                    type="text"
+                    required
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    placeholder="Ex: Nome do Administrador"
+                    class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome de Usuário (Login) *</label>
+                  <input
+                    type="text"
+                    required
+                    value={profileUsername}
+                    onChange={(e) => setProfileUsername(e.target.value)}
+                    placeholder="Ex: admin"
+                    class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                  />
+                </div>
+
+                <hr class="border-slate-700 my-6" />
+
+                <div>
+                  <label class="block text-slate-300 text-xs font-bold mb-1.5">Nova Senha (deixe em branco para manter a atual)</label>
+                  <input
+                    type="password"
+                    value={profilePassword}
+                    onChange={(e) => setProfilePassword(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                    class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-slate-300 text-xs font-bold mb-1.5">Confirmar Nova Senha</label>
+                  <input
+                    type="password"
+                    value={profileConfirmPassword}
+                    onChange={(e) => setProfileConfirmPassword(e.target.value)}
+                    placeholder="Confirme a nova senha"
+                    class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                  />
+                </div>
+              </div>
+
+              <div class="flex justify-end pt-4">
+                <button
+                  type="submit"
+                  class="px-6 py-2.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white font-bold rounded-xl text-sm shadow-lg shadow-primary-600/10 transition-all duration-300"
+                >
+                  Salvar Alterações
+                </button>
+              </div>
+            </form>
+          </section>
         )}
       </main>
 
@@ -600,7 +754,7 @@ export default function SuperAdmin({ onLogout }) {
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Ex: SkyAgro Drones"
+                      placeholder="Ex: Drone Servicos Ltda"
                       class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                     />
                   </div>
@@ -654,7 +808,7 @@ export default function SuperAdmin({ onLogout }) {
                       required
                       value={adminName}
                       onChange={(e) => setAdminName(e.target.value)}
-                      placeholder="Ex: Marcelo Sgarbi Dias"
+                      placeholder="Ex: João da Silva"
                       class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                     />
                   </div>
@@ -665,7 +819,7 @@ export default function SuperAdmin({ onLogout }) {
                       required
                       value={adminUsername}
                       onChange={(e) => setAdminUsername(e.target.value)}
-                      placeholder="Ex: marcelo.admin"
+                      placeholder="Ex: joao.admin"
                       class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                     />
                   </div>
@@ -739,7 +893,7 @@ export default function SuperAdmin({ onLogout }) {
                     required
                     value={planNameInput}
                     onChange={(e) => setPlanNameInput(e.target.value)}
-                    placeholder="Ex: Gold"
+                    placeholder="Ex: Premium"
                     class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                   />
                 </div>
@@ -749,7 +903,19 @@ export default function SuperAdmin({ onLogout }) {
                     type="text"
                     value={planDescriptionInput}
                     onChange={(e) => setPlanDescriptionInput(e.target.value)}
-                    placeholder="Ex: Até 10 pilotos e suporte premium"
+                    placeholder="Ex: Pilotos ilimitados e suporte 24h"
+                    class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                  />
+                </div>
+                <div>
+                  <label class="block text-slate-300 text-xs font-bold mb-1.5">Limite de Dispositivos/Acessos Simultâneos *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={planMaxDevicesInput}
+                    onChange={(e) => setPlanMaxDevicesInput(parseInt(e.target.value, 10) || 1)}
+                    placeholder="Ex: 3"
                     class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                   />
                 </div>

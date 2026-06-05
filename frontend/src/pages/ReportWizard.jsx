@@ -14,6 +14,8 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
   // ==========================================
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
+  const [clientDocument, setClientDocument] = useState('');
+  const [farmAddress, setFarmAddress] = useState('');
   const [farmName, setFarmName] = useState('');
   const [culture, setCulture] = useState('Pastagem');
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
@@ -255,6 +257,8 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
           client_name: clientName,
           farm_name: farmName,
           client_email: clientEmail,
+          client_document: clientDocument,
+          farm_address: farmAddress,
           culture,
           report_date: reportDate,
           flights_data: flights,
@@ -365,6 +369,29 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
                   value={clientEmail}
                   onChange={(e) => setClientEmail(e.target.value)}
                   placeholder="Ex: cliente@email.com"
+                  class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-slate-300 text-xs font-bold mb-1.5">CPF ou CNPJ do Cliente (Opcional)</label>
+                <input
+                  type="text"
+                  value={clientDocument}
+                  onChange={(e) => setClientDocument(e.target.value)}
+                  placeholder="Ex: 000.000.000-00 ou 00.000.000/0000-00"
+                  class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                />
+              </div>
+              <div>
+                <label class="block text-slate-300 text-xs font-bold mb-1.5">Endereço da Fazenda (Completo)</label>
+                <input
+                  type="text"
+                  value={farmAddress}
+                  onChange={(e) => setFarmAddress(e.target.value)}
+                  placeholder="Ex: Rodovia BR-116, Km 45, Zona Rural"
                   class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                 />
               </div>

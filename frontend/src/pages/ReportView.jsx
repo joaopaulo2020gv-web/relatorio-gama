@@ -92,7 +92,14 @@ export default function ReportView({ reportId, onBack }) {
 
           {/* Dados do Cliente e Assinatura */}
           <div class="border-t border-slate-200 pt-6 mt-16 text-xs text-slate-700 font-semibold space-y-1.5">
-            <div>CLIENTE: <span class="text-slate-900 font-bold uppercase">{report.client_name} - FAZENDA {report.farm_name}</span></div>
+            <div>CLIENTE: <span class="text-slate-900 font-bold uppercase">{report.client_name}</span></div>
+            {report.client_document && (
+              <div>CPF/CNPJ: <span class="text-slate-900 font-bold">{report.client_document}</span></div>
+            )}
+            <div>FAZENDA: <span class="text-slate-900 font-bold uppercase">{report.farm_name}</span></div>
+            {report.farm_address && (
+              <div>ENDEREÇO DA FAZENDA: <span class="text-slate-900 font-bold uppercase">{report.farm_address}</span></div>
+            )}
             {report.client_email && (
               <div>E-MAIL: <span class="text-slate-900 font-bold">{report.client_email}</span></div>
             )}
@@ -130,11 +137,21 @@ export default function ReportView({ reportId, onBack }) {
               </thead>
               <tbody>
                 <tr class="text-slate-800">
-                  <td class="border border-slate-300 px-3 py-2 uppercase">{report.client_name}</td>
+                  <td class="border border-slate-300 px-3 py-2 uppercase">
+                    <div>{report.client_name}</div>
+                    {report.client_document && (
+                      <div class="text-[9px] text-slate-500 font-black mt-0.5">CPF/CNPJ: {report.client_document}</div>
+                    )}
+                  </td>
                   {report.client_email && (
                     <td class="border border-slate-300 px-3 py-2">{report.client_email}</td>
                   )}
-                  <td class="border border-slate-300 px-3 py-2 uppercase">Fazenda {report.farm_name}</td>
+                  <td class="border border-slate-300 px-3 py-2 uppercase">
+                    <div>Fazenda {report.farm_name}</div>
+                    {report.farm_address && (
+                      <div class="text-[9px] text-slate-500 font-black mt-0.5 normal-case">{report.farm_address}</div>
+                    )}
+                  </td>
                   <td class="border border-slate-300 px-3 py-2 uppercase">{report.culture}</td>
                 </tr>
               </tbody>

@@ -65,7 +65,7 @@ export default function ReportView({ reportId, onBack }) {
         {/* ==========================================
            PÁGINA 1: CAPA
            ========================================== */}
-        <div class="page-break-inside-avoid h-[25cm] print:h-[22.5cm] flex flex-col justify-between relative">
+        <div class="page-break-inside-avoid h-[25cm] print:h-auto print:block relative">
           {/* Logo Topo Direita */}
           <div class="flex justify-end">
             {report.company_logo_url ? (
@@ -76,7 +76,7 @@ export default function ReportView({ reportId, onBack }) {
           </div>
 
           {/* Logo Principal Centro */}
-          <div class="flex flex-col items-center justify-center flex-1 my-16 space-y-6">
+          <div class="flex flex-col items-center justify-center flex-1 my-16 print:my-8 print:py-6 space-y-6">
             {report.company_logo_url ? (
               <img src={report.company_logo_url} alt="Logo Central" class="h-36 max-w-[400px] object-contain" />
             ) : (
@@ -85,12 +85,12 @@ export default function ReportView({ reportId, onBack }) {
           </div>
 
           {/* Título Principal */}
-          <div class="text-left space-y-2 border-l-4 border-emerald-600 pl-4 py-2">
+          <div class="text-left space-y-2 border-l-4 border-emerald-600 pl-4 py-2 print:my-6">
             <h1 class="text-2xl font-black tracking-tight text-slate-800 uppercase">RELATÓRIO DE PRESTAÇÃO DE SERVIÇOS</h1>
           </div>
 
           {/* Dados do Cliente e Assinatura */}
-          <div class="border-t border-slate-200 pt-6 mt-16 text-xs text-slate-700 font-semibold space-y-1.5">
+          <div class="border-t border-slate-200 pt-6 mt-16 print:mt-8 text-xs text-slate-700 font-semibold space-y-1.5">
             <div>CLIENTE: <span class="text-slate-900 font-bold uppercase">{report.client_name}</span></div>
             {report.client_document && (
               <div>CPF/CNPJ: <span class="text-slate-900 font-bold">{report.client_document}</span></div>

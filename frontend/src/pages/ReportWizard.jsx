@@ -499,11 +499,6 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
       return;
     }
 
-    if (!pilotSignature || !clientSignature) {
-      setError('Por favor, colete as assinaturas digitais do piloto e do cliente no Passo 6 antes de finalizar.');
-      setStep(6);
-      return;
-    }
 
     const reportPayload = {
       ...(draftId ? { id: draftId } : {}),
@@ -1269,12 +1264,12 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
               <h4 class="text-sm font-bold text-primary-400 uppercase tracking-wider">Assinaturas Digitais</h4>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <SignaturePad 
-                  label="Assinatura do Piloto Responsável *" 
+                  label="Assinatura do Piloto Responsável (Opcional)" 
                   value={pilotSignature} 
                   onChange={setPilotSignature} 
                 />
                 <SignaturePad 
-                  label="Assinatura do Produtor / Cliente *" 
+                  label="Assinatura do Produtor / Cliente (Opcional)" 
                   value={clientSignature} 
                   onChange={setClientSignature} 
                 />

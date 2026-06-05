@@ -1,5 +1,70 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Save, Plus, Trash2, Camera, MapPin, Thermometer, Droplet, DollarSign, Calendar } from 'lucide-react';
+import { saveDraft } from '../utils/offlineDb';
+
+// Função auxiliar para converter arquivo em String Base64 para armazenamento offline
+const fileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+// Função auxiliar para comprimir imagens no frontend antes de enviar
+const compressImage = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.7) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Redimensionar proporcionalmente
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Erro na compressão: Blob vazio'));
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
 
 export default function ReportWizard({ onCancel, onSaveSuccess }) {
   const [step, setStep] = useState(1);
@@ -111,10 +176,27 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
     setUploading(true);
     setError('');
 
-    const formData = new FormData();
-    formData.append('photo', file);
-
     try {
+      // 1. Comprimir imagem antes do envio (ou conversão offline)
+      let fileToUpload = file;
+      try {
+        fileToUpload = await compressImage(file);
+        console.log(`Foto comprimida com sucesso. Tamanho original: ${(file.size / 1024).toFixed(0)}KB | Novo: ${(fileToUpload.size / 1024).toFixed(0)}KB`);
+      } catch (compressErr) {
+        console.warn('Erro ao comprimir imagem, usando original:', compressErr);
+      }
+
+      // 2. Se o navegador estiver offline, converte em Base64 e salva localmente
+      if (!navigator.onLine) {
+        const base64Url = await fileToBase64(fileToUpload);
+        callback(base64Url);
+        return;
+      }
+
+      // 3. Se online, envia para a API
+      const formData = new FormData();
+      formData.append('photo', fileToUpload);
+
       const response = await fetch('/api/reports/upload', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('gama_token')}` },
@@ -246,6 +328,41 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
       return;
     }
 
+    const reportPayload = {
+      client_name: clientName,
+      farm_name: farmName,
+      client_email: clientEmail,
+      client_document: clientDocument,
+      farm_address: farmAddress,
+      culture,
+      report_date: reportDate,
+      flights_data: flights,
+      weather_temp: weatherTemp,
+      weather_humidity: weatherHumidity,
+      weather_desc: weatherDesc,
+      delta_t: deltaT,
+      caldas_data: caldas,
+      ph_photo_url: phPhotoUrl,
+      ph_desc: phDesc,
+      maps_data: maps,
+      observations,
+      total_area: totalArea,
+      price_per_ha: pricePerHa,
+      total_price: totalPrice
+    };
+
+    // Se o navegador estiver offline, salva o rascunho no IndexedDB
+    if (!navigator.onLine) {
+      try {
+        await saveDraft(reportPayload);
+        alert('Você está offline! O relatório foi salvo localmente e será sincronizado assim que voltar a ter internet.');
+        onSaveSuccess();
+      } catch (dbErr) {
+        setError('Falha ao salvar relatório offline: ' + dbErr.message);
+      }
+      return;
+    }
+
     try {
       const response = await fetch('/api/reports', {
         method: 'POST',
@@ -253,28 +370,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('gama_token')}`
         },
-        body: JSON.stringify({
-          client_name: clientName,
-          farm_name: farmName,
-          client_email: clientEmail,
-          client_document: clientDocument,
-          farm_address: farmAddress,
-          culture,
-          report_date: reportDate,
-          flights_data: flights,
-          weather_temp: weatherTemp,
-          weather_humidity: weatherHumidity,
-          weather_desc: weatherDesc,
-          delta_t: deltaT,
-          caldas_data: caldas,
-          ph_photo_url: phPhotoUrl,
-          ph_desc: phDesc,
-          maps_data: maps,
-          observations,
-          total_area: totalArea,
-          price_per_ha: pricePerHa,
-          total_price: totalPrice
-        })
+        body: JSON.stringify(reportPayload)
       });
 
       const data = await response.json();
@@ -284,6 +380,18 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
 
       onSaveSuccess();
     } catch (err) {
+      console.error('Falha ao salvar relatório:', err);
+      // Se falhar a conexão (fetch de rede), salvamos offline
+      if (err.message && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
+        try {
+          await saveDraft(reportPayload);
+          alert('Erro de conexão! O relatório foi salvo localmente no aparelho para não perder os dados. Sincronize-o quando a internet estiver estável.');
+          onSaveSuccess();
+          return;
+        } catch (dbErr) {
+          console.error('Erro ao salvar no IndexedDB de fallback:', dbErr);
+        }
+      }
       setError(err.message);
     }
   };

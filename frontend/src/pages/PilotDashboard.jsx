@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { LogOut, Plus, FileText, Eye, Map, Trash2 } from 'lucide-react';
+import { getDrafts, deleteDraft } from '../utils/offlineDb';
 
 export default function PilotDashboard({ onLogout, onCreateReport, onViewReport }) {
   const [reports, setReports] = useState([]);
+  const [offlineDrafts, setOfflineDrafts] = useState([]);
+  const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState('');
   const [loading, setLoading] = useState(true);
   const user = JSON.parse(localStorage.getItem('gama_user') || '{}');
 
@@ -22,9 +26,143 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport 
     }
   };
 
+  const fetchOfflineDrafts = async () => {
+    try {
+      const drafts = await getDrafts();
+      setOfflineDrafts(drafts);
+    } catch (err) {
+      console.error('Erro ao buscar rascunhos offline:', err);
+    }
+  };
+
   useEffect(() => {
     fetchPilotReports();
+    fetchOfflineDrafts();
   }, []);
+
+  const base64ToBlob = (base64) => {
+    const arr = base64.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  };
+
+  const isBase64 = (str) => typeof str === 'string' && str.startsWith('data:image/');
+
+  const handleSyncOfflineReports = async () => {
+    if (!navigator.onLine) {
+      alert('Você ainda está sem internet. Não é possível sincronizar no momento.');
+      return;
+    }
+
+    if (offlineDrafts.length === 0) return;
+
+    setSyncing(true);
+    setSyncProgress('Iniciando sincronização...');
+
+    try {
+      for (let i = 0; i < offlineDrafts.length; i++) {
+        const draft = offlineDrafts[i];
+        setSyncProgress(`Sincronizando relatório ${i + 1} de ${offlineDrafts.length}...`);
+
+        let updatedPhPhotoUrl = draft.ph_photo_url;
+        let updatedMaps = [...(draft.maps_data || [])];
+
+        // 1. Upload da foto do pH se for base64
+        if (isBase64(updatedPhPhotoUrl)) {
+          setSyncProgress(`Enviando foto de pH do relatório ${i + 1}...`);
+          const blob = base64ToBlob(updatedPhPhotoUrl);
+          const file = new File([blob], 'ph_photo.jpg', { type: blob.type });
+          const formData = new FormData();
+          formData.append('photo', file);
+
+          const uploadRes = await fetch('/api/reports/upload', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('gama_token')}` },
+            body: formData
+          });
+
+          if (uploadRes.ok) {
+            const data = await uploadRes.json();
+            updatedPhPhotoUrl = data.url;
+          } else {
+            throw new Error('Falha no upload da foto de pH.');
+          }
+        }
+
+        // 2. Upload das fotos dos mapas se forem base64
+        for (let j = 0; j < updatedMaps.length; j++) {
+          const map = updatedMaps[j];
+          if (isBase64(map.photo_url)) {
+            setSyncProgress(`Enviando mapa ${j + 1} do relatório ${i + 1}...`);
+            const blob = base64ToBlob(map.photo_url);
+            const file = new File([blob], `map_photo_${j}.jpg`, { type: blob.type });
+            const formData = new FormData();
+            formData.append('photo', file);
+
+            const uploadRes = await fetch('/api/reports/upload', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('gama_token')}` },
+              body: formData
+            });
+
+            if (uploadRes.ok) {
+              const data = await uploadRes.json();
+              updatedMaps[j] = {
+                ...map,
+                photo_url: data.url
+              };
+            } else {
+              throw new Error(`Falha no upload do mapa ${j + 1}.`);
+            }
+          }
+        }
+
+        // 3. Salvar relatório atualizado na API
+        setSyncProgress(`Salvando dados do relatório ${i + 1} no servidor...`);
+        const reportPayload = {
+          ...draft,
+          ph_photo_url: updatedPhPhotoUrl,
+          maps_data: updatedMaps
+        };
+
+        delete reportPayload.id;
+        delete reportPayload.savedAt;
+
+        const response = await fetch('/api/reports', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('gama_token')}`
+          },
+          body: JSON.stringify(reportPayload)
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Erro ao salvar relatório no servidor.');
+        }
+
+        // 4. Deletar rascunho com sucesso do IndexedDB
+        await deleteDraft(draft.id);
+      }
+
+      alert('Todos os relatórios foram sincronizados com sucesso!');
+      fetchOfflineDrafts();
+      fetchPilotReports();
+    } catch (err) {
+      console.error(err);
+      alert(`Erro durante a sincronização: ${err.message}`);
+    } finally {
+      setSyncing(false);
+      setSyncProgress('');
+    }
+  };
 
   const handleDeleteReport = async (reportId) => {
     if (!window.confirm('Deseja excluir este relatório permanentemente?')) {
@@ -76,6 +214,30 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport 
       {/* Main Container */}
       <main class="max-w-5xl mx-auto p-6 space-y-8">
         
+        {/* Banner de Sincronização Offline */}
+        {offlineDrafts.length > 0 && (
+          <div class="bg-amber-500/10 border border-amber-500/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-pulse">
+            <div class="flex items-center space-x-3 text-amber-400">
+              <FileText size={22} />
+              <div class="text-sm font-semibold text-slate-200">
+                Você possui <span class="text-amber-400 font-extrabold">{offlineDrafts.length}</span> {offlineDrafts.length === 1 ? 'relatório salvo' : 'relatórios salvos'} offline no aparelho.
+                <p class="text-xs text-slate-400 font-normal mt-0.5">Sincronize-os com o servidor assim que estiver com internet.</p>
+              </div>
+            </div>
+            <button
+              onClick={handleSyncOfflineReports}
+              disabled={syncing}
+              class="bg-amber-500 hover:bg-amber-400 disabled:bg-amber-600/50 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs flex items-center space-x-1.5 transition-all shadow-md active:scale-95 disabled:pointer-events-none"
+            >
+              {syncing ? (
+                <span>{syncProgress || 'Sincronizando...'}</span>
+              ) : (
+                <span>Sincronizar Agora</span>
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Banner de Boas-vindas e Ação Principal */}
         <section class="bg-gradient-to-r from-slate-800 to-slate-800/60 border border-slate-700/40 p-8 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6">
           <div class="space-y-2 text-center md:text-left">

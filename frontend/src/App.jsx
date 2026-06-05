@@ -18,6 +18,9 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [shouldAutoPrompt, setShouldAutoPrompt] = useState(false);
+  
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   // Estado e Efeitos de Tema (Modo Claro/Escuro)
   const [theme, setTheme] = useState(() => {
@@ -280,18 +283,52 @@ export default function App() {
               </p>
             </div>
 
+            {isIOS && (
+              /* Instruções específicas para iOS/Safari/iPhone */
+              <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/40 p-4 rounded-2xl text-left text-xs space-y-3 shadow-inner">
+                <p class="font-bold text-center text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-1.5 mb-1 text-[11px] uppercase tracking-wider">Passos no iPhone (Safari)</p>
+                <div class="flex items-start space-x-2">
+                  <span class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-[10px]">1</span>
+                  <p class="text-slate-600 dark:text-slate-300 leading-tight">
+                    Toque no botão **Compartilhar** do Safari (ícone <svg class="w-3.5 h-3.5 inline-block mb-1 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg> na barra inferior).
+                  </p>
+                </div>
+                <div class="flex items-start space-x-2">
+                  <span class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-[10px]">2</span>
+                  <p class="text-slate-600 dark:text-slate-300 leading-tight">
+                    Role a lista para baixo e selecione **Adicionar à Tela de Início** (ícone <svg class="w-3.5 h-3.5 inline-block mb-1 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></svg>).
+                  </p>
+                </div>
+                <div class="flex items-start space-x-2">
+                  <span class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-[10px]">3</span>
+                  <p class="text-slate-600 dark:text-slate-300 leading-tight">
+                    Toque em **Adicionar** no canto superior direito.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div class="flex flex-col space-y-2 pt-2">
-              <button
-                onClick={handleInstallClick}
-                class="w-full bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white font-extrabold text-sm py-3 rounded-xl shadow-lg transition-all"
-              >
-                Instalar Agora
-              </button>
+              {!isIOS ? (
+                <button
+                  onClick={handleInstallClick}
+                  class="w-full bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white font-extrabold text-sm py-3 rounded-xl shadow-lg transition-all"
+                >
+                  Instalar Agora
+                </button>
+              ) : (
+                <button
+                  onClick={handleCloseModal}
+                  class="w-full bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white font-extrabold text-sm py-3 rounded-xl shadow-lg transition-all"
+                >
+                  Entendi
+                </button>
+              )}
               <button
                 onClick={handleCloseModal}
                 class="w-full text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white font-bold text-xs py-2 transition-all"
               >
-                Agora Não
+                {!isIOS ? "Agora Não" : "Fechar"}
               </button>
             </div>
           </div>

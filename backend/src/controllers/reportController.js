@@ -85,7 +85,7 @@ exports.listReports = (req, res) => {
 
   if (role === 'superadmin') {
     query = `
-      SELECT r.id, r.client_name, r.farm_name, r.report_date, r.total_area, r.total_price,
+      SELECT r.id, r.client_name, r.farm_name, r.culture, r.report_date, r.total_area, r.total_price,
              u.name as pilot_name, c.name as company_name 
       FROM reports r 
       JOIN users u ON r.pilot_id = u.id 
@@ -94,7 +94,7 @@ exports.listReports = (req, res) => {
     `;
   } else if (role === 'admin') {
     query = `
-      SELECT r.id, r.client_name, r.farm_name, r.report_date, r.total_area, r.total_price,
+      SELECT r.id, r.client_name, r.farm_name, r.culture, r.report_date, r.total_area, r.total_price,
              u.name as pilot_name 
       FROM reports r 
       JOIN users u ON r.pilot_id = u.id 
@@ -105,7 +105,7 @@ exports.listReports = (req, res) => {
   } else {
     // Piloto
     query = `
-      SELECT r.id, r.client_name, r.farm_name, r.report_date, r.total_area, r.total_price
+      SELECT r.id, r.client_name, r.farm_name, r.culture, r.report_date, r.total_area, r.total_price
       FROM reports r
       WHERE r.pilot_id = ?
       ORDER BY r.created_at DESC

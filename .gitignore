@@ -40,3 +40,6 @@ uploads/
 .gemini/
 .DS_Store
 Thumbs.db
+
+# Pacotes de deploy temporários
+deploy.tar.gz

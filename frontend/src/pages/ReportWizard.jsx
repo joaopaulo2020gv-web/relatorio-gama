@@ -320,7 +320,15 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
           {[1, 2, 3, 4, 5, 6].map(i => (
             <button
               key={i}
-              onClick={() => setStep(i)}
+              onClick={() => {
+                if (i > 1 && (!clientName || !farmName || !culture)) {
+                  setError('Por favor, preencha Cliente, Fazenda e Cultura.');
+                  setStep(1);
+                  return;
+                }
+                setError('');
+                setStep(i);
+              }}
               class={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs z-10 border transition-all ${
                 i <= step 
                   ? 'bg-primary-600 border-primary-500 text-white shadow-lg shadow-primary-500/20' 
@@ -955,7 +963,14 @@ export default function ReportWizard({ onCancel, onSaveSuccess }) {
           {step < 6 ? (
             <button
               type="button"
-              onClick={() => setStep(step + 1)}
+              onClick={() => {
+                if (step === 1 && (!clientName || !farmName || !culture)) {
+                  setError('Por favor, preencha Cliente, Fazenda e Cultura.');
+                  return;
+                }
+                setError('');
+                setStep(step + 1);
+              }}
               class="flex items-center space-x-1.5 bg-primary-600 hover:bg-primary-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md"
             >
               <span>Avançar</span>

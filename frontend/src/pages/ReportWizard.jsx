@@ -940,7 +940,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
               {/* Indicador Delta T */}
               <div class="bg-slate-900/50 border border-slate-700/60 p-6 rounded-2xl flex flex-col justify-center items-center text-center">
                 <div class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Delta T Calculado</div>
-                <div class="text-5xl font-black text-white mb-2">{deltaT}</div>
+                <div class="text-5xl font-black text-slate-800 dark:text-white mb-2">{deltaT}</div>
                 
                 {/* Safe / Danger zones baseadas no Delta T (ideal de 2 a 8) */}
                 {deltaT >= 2 && deltaT <= 8 ? (

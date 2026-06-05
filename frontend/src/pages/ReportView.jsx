@@ -89,9 +89,9 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
           </div>
 
           {/* Logo Principal Centro */}
-          <div class="flex flex-col items-center justify-center flex-1 my-16 print:my-8 print:py-6 space-y-6">
+          <div class="flex flex-col items-center justify-center flex-1 my-16 print:my-4 print:py-2 space-y-6">
             {report.company_logo_url ? (
-              <img src={report.company_logo_url} alt="Logo Central" class="h-36 max-w-[400px] object-contain" />
+              <img src={report.company_logo_url} alt="Logo Central" class="h-36 print:h-28 max-w-[400px] object-contain" />
             ) : (
               <span class="text-5xl font-black text-slate-700 uppercase tracking-wider">{report.company_name}</span>
             )}
@@ -103,7 +103,7 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
           </div>
 
           {/* Dados do Cliente e Assinatura */}
-          <div class="border-t border-slate-200 pt-6 mt-16 print:mt-8 text-xs text-slate-700 font-semibold space-y-1.5">
+          <div class="border-t border-slate-200 pt-6 mt-16 print:mt-4 text-xs text-slate-700 font-semibold space-y-1.5">
             <div>CLIENTE: <span class="text-slate-900 font-bold uppercase">{report.client_name}</span></div>
             {report.client_document && (
               <div>CPF/CNPJ: <span class="text-slate-900 font-bold">{report.client_document}</span></div>

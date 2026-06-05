@@ -71,6 +71,8 @@ input:focus, select:focus, textarea:focus {
     box-shadow: none !important;
     border: none !important;
     background: #ffffff !important;
+    min-height: auto !important;
+    height: auto !important;
   }
 
   /* Quebras de páginas */

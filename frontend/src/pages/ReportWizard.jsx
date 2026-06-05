@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Save, Plus, Trash2, Camera, MapPin, Thermometer, Droplet, DollarSign, Calendar, Sun, Moon } from 'lucide-react';
 import { saveDraft } from '../utils/offlineDb';
+import { triggerHaptic } from '../utils/haptic';
 
 // Função auxiliar para converter arquivo em String Base64 para armazenamento offline
 const fileToBase64 = (file) => {
@@ -439,10 +440,12 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
               key={i}
               onClick={() => {
                 if (i > 1 && (!clientName || !farmName || !culture)) {
+                  triggerHaptic(25);
                   setError('Por favor, preencha Cliente, Fazenda e Cultura.');
                   setStep(1);
                   return;
                 }
+                triggerHaptic(10);
                 setError('');
                 setStep(i);
               }}
@@ -1070,7 +1073,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
           <button
             type="button"
             disabled={step === 1}
-            onClick={() => setStep(step - 1)}
+            onClick={() => { triggerHaptic(10); setStep(step - 1); }}
             class="flex items-center space-x-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 px-5 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-30 disabled:pointer-events-none"
           >
             <ChevronLeft size={16} />
@@ -1082,9 +1085,11 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
               type="button"
               onClick={() => {
                 if (step === 1 && (!clientName || !farmName || !culture)) {
+                  triggerHaptic(25);
                   setError('Por favor, preencha Cliente, Fazenda e Cultura.');
                   return;
                 }
+                triggerHaptic(12);
                 setError('');
                 setStep(step + 1);
               }}
@@ -1096,7 +1101,7 @@ export default function ReportWizard({ onCancel, onSaveSuccess, theme, toggleThe
           ) : (
             <button
               type="button"
-              onClick={handleSaveReport}
+              onClick={() => { triggerHaptic(15); handleSaveReport(); }}
               class="flex items-center space-x-1.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-6 py-3 rounded-xl font-extrabold text-sm shadow-lg transition-all"
             >
               <Save size={16} />

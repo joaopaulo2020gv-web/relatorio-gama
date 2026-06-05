@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Plus, FileText, Eye, Map, Trash2, Sun, Moon } from 'lucide-react';
+import { LogOut, Plus, FileText, Eye, Map, Trash2, Sun, Moon, Download } from 'lucide-react';
 import { getDrafts, deleteDraft } from '../utils/offlineDb';
+import { triggerHaptic } from '../utils/haptic';
 
-export default function PilotDashboard({ onLogout, onCreateReport, onViewReport, theme, toggleTheme }) {
+export default function PilotDashboard({ onLogout, onCreateReport, onViewReport, theme, toggleTheme, showInstallOption, onTriggerInstall }) {
   const [reports, setReports] = useState([]);
   const [offlineDrafts, setOfflineDrafts] = useState([]);
   const [syncing, setSyncing] = useState(false);
@@ -202,6 +203,18 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
             <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">Piloto de Drones</div>
           </div>
           
+          {/* Botão de Instalação (se elegível e não instalado) */}
+          {showInstallOption && (
+            <button
+              onClick={onTriggerInstall}
+              type="button"
+              class="p-2 bg-gradient-to-tr from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white border border-primary-500/20 rounded-xl transition-all shadow-md animate-pulse"
+              title="Instalar AgroSkan no Celular"
+            >
+              <Download size={15} />
+            </button>
+          )}
+
           {/* Botão de Tema */}
           <button
             onClick={toggleTheme}
@@ -213,7 +226,7 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
           </button>
 
           <button 
-            onClick={onLogout}
+            onClick={() => { triggerHaptic(12); onLogout(); }}
             class="flex items-center space-x-2 bg-slate-100 hover:bg-red-500/10 hover:text-red-600 dark:bg-slate-700/50 dark:hover:bg-red-500/10 dark:hover:text-red-200 border border-slate-200 dark:border-slate-600/50 dark:hover:border-red-500/20 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
           >
             <LogOut size={15} />
@@ -256,8 +269,8 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
             <p class="text-slate-550 dark:text-slate-400 font-medium text-sm">Pronto para lançar um novo relatório de pulverização em campo?</p>
           </div>
           <button
-            onClick={onCreateReport}
-            class="flex items-center space-x-2 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-6 py-3.5 rounded-2xl text-base font-extrabold shadow-lg shadow-primary-500/10 hover:shadow-primary-500/20 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
+            onClick={() => { triggerHaptic(12); onCreateReport(); }}
+            class="flex items-center space-x-1.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-5 py-3 rounded-2xl text-xs font-bold shadow-lg shadow-primary-500/20 hover:shadow-primary-500/30 transition-all w-full sm:w-auto justify-center hover:-translate-y-0.5 active:translate-y-0"
           >
             <Plus size={20} />
             <span>Novo Relatório</span>
@@ -312,14 +325,14 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
                       <td class="px-6 py-4 text-center">
                         <div class="flex items-center justify-center space-x-2">
                           <button
-                            onClick={() => onViewReport(r.id)}
+                            onClick={() => { triggerHaptic(10); onViewReport(r.id); }}
                             class="p-2 text-primary-600 dark:text-primary-400 hover:text-white bg-slate-50 hover:bg-primary-600 border border-slate-200 dark:border-slate-700/60 hover:border-primary-500 rounded-lg transition-all"
                             title="Ver Relatório / Exportar PDF"
                           >
                             <Eye size={15} />
                           </button>
                           <button
-                            onClick={() => handleDeleteReport(r.id)}
+                            onClick={() => { triggerHaptic(15); handleDeleteReport(r.id); }}
                             class="p-2 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 bg-slate-50 hover:bg-red-500/10 dark:bg-slate-950/20 dark:hover:bg-red-500/10 border border-slate-200 dark:border-slate-700/60 dark:hover:border-red-500/20 rounded-lg transition-all"
                             title="Excluir"
                           >

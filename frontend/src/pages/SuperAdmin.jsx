@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Plus, ShieldCheck, Landmark, Users, FileText, ToggleLeft, ToggleRight, Trash2, Pencil, CreditCard, Sun, Moon } from 'lucide-react';
+import { LogOut, Plus, ShieldCheck, Landmark, Users, FileText, ToggleLeft, ToggleRight, Trash2, Pencil, CreditCard, Sun, Moon, Download } from 'lucide-react';
+import { triggerHaptic } from '../utils/haptic';
 
-export default function SuperAdmin({ onLogout, theme, toggleTheme }) {
+export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOption, onTriggerInstall }) {
   const [companies, setCompanies] = useState([]);
   const [stats, setStats] = useState({ total_companies: 0, active_companies: 0, total_pilots: 0, total_reports: 0 });
   const [loading, setLoading] = useState(true);
@@ -387,6 +388,18 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme }) {
           </div>
         </div>
         <div class="flex items-center space-x-3">
+          {/* Botão de Instalação (se elegível e não instalado) */}
+          {showInstallOption && (
+            <button
+              onClick={onTriggerInstall}
+              type="button"
+              class="p-2.5 bg-gradient-to-tr from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white border border-primary-500/20 rounded-xl transition-all shadow-md animate-pulse"
+              title="Instalar AgroSkan no Celular"
+            >
+              <Download size={16} />
+            </button>
+          )}
+
           {/* Botão de Tema */}
           <button
             onClick={toggleTheme}
@@ -397,7 +410,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme }) {
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
           <button 
-            onClick={onLogout}
+            onClick={() => { triggerHaptic(12); onLogout(); }}
             class="flex items-center space-x-2 bg-slate-100 hover:bg-red-500/10 hover:text-red-600 dark:bg-slate-700/50 dark:hover:bg-red-500/10 dark:hover:text-red-200 border border-slate-200 dark:border-slate-600/50 dark:hover:border-red-500/20 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
           >
             <LogOut size={16} />

@@ -6,6 +6,7 @@
 html, body {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain; /* Desativa pull-to-refresh nativo no mobile */
 }
 
 .overflow-y-auto, .overflow-x-auto {

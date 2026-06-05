@@ -5,6 +5,7 @@ import ClientAdmin from './pages/ClientAdmin';
 import PilotDashboard from './pages/PilotDashboard';
 import ReportWizard from './pages/ReportWizard';
 import ReportView from './pages/ReportView';
+import { triggerHaptic } from './utils/haptic';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -29,18 +30,66 @@ export default function App() {
 
   useEffect(() => {
     const root = window.document.documentElement;
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
     if (theme === 'dark') {
       root.classList.add('dark');
       root.classList.remove('light');
+      if (themeColorMeta) themeColorMeta.setAttribute('content', '#0f172a'); // slate-900
     } else {
       root.classList.add('light');
       root.classList.remove('dark');
+      if (themeColorMeta) themeColorMeta.setAttribute('content', '#f8fafc'); // slate-50
     }
     localStorage.setItem('agroskan_theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
+    triggerHaptic(12);
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  // Sincroniza o histórico do navegador quando a página interna do React muda
+  useEffect(() => {
+    if (!user) return; // Não gerencia histórico se não estiver autenticado
+
+    const currentState = window.history.state;
+    if (!currentState || currentState.page !== page || currentState.reportId !== selectedReportId) {
+      window.history.pushState({ page, reportId: selectedReportId }, '', '');
+    }
+  }, [page, selectedReportId, user]);
+
+  // Escuta o botão físico de voltar do dispositivo
+  useEffect(() => {
+    const handlePopState = (e) => {
+      if (e.state && e.state.page) {
+        setPage(e.state.page);
+        setSelectedReportId(e.state.reportId || null);
+      } else if (user) {
+        setPage('dashboard');
+        setSelectedReportId(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    if (user) {
+      window.history.replaceState({ page: 'dashboard', reportId: null }, '', '');
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [user]);
+
+  // Estado calculado para instalação facilitada do PWA
+  const isStandalone = typeof window !== 'undefined' && 
+                       (window.matchMedia('(display-mode: standalone)').matches || 
+                        window.navigator.standalone);
+  const showInstallOption = !isStandalone && (deferredPrompt || isIOS);
+
+  const triggerInstallPrompt = () => {
+    triggerHaptic(15);
+    setShowInstallModal(true);
   };
 
   useEffect(() => {
@@ -91,6 +140,7 @@ export default function App() {
   };
 
   const handleInstallClick = async () => {
+    triggerHaptic(15);
     if (!deferredPrompt) return;
     
     // Disparar prompt de instalação nativa
@@ -108,6 +158,7 @@ export default function App() {
   };
 
   const handleCloseModal = () => {
+    triggerHaptic(8);
     setShowInstallModal(false);
     setShouldAutoPrompt(false);
     cleanInstallUrl();
@@ -194,7 +245,15 @@ export default function App() {
     // 3. Roteamento por Cargos (Roles)
     switch (user.role) {
       case 'superadmin':
-        return <SuperAdmin onLogout={handleLogout} theme={theme} toggleTheme={toggleTheme} />;
+        return (
+          <SuperAdmin 
+            onLogout={handleLogout} 
+            theme={theme} 
+            toggleTheme={toggleTheme} 
+            showInstallOption={showInstallOption}
+            onTriggerInstall={triggerInstallPrompt}
+          />
+        );
 
       case 'admin':
         if (page === 'create-report') {
@@ -219,6 +278,8 @@ export default function App() {
             }}
             theme={theme}
             toggleTheme={toggleTheme}
+            showInstallOption={showInstallOption}
+            onTriggerInstall={triggerInstallPrompt}
           />
         );
 
@@ -245,6 +306,8 @@ export default function App() {
             }}
             theme={theme}
             toggleTheme={toggleTheme}
+            showInstallOption={showInstallOption}
+            onTriggerInstall={triggerInstallPrompt}
           />
         );
 

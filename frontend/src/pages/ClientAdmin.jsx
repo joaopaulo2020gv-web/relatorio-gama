@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Save, UserPlus, Users, FileText, Trash2, Eye, Upload, Plus, BarChart3, TrendingUp, Award, Activity, DollarSign, Layers, Sun, Moon } from 'lucide-react';
+import { LogOut, Save, UserPlus, Users, FileText, Trash2, Eye, Upload, Plus, BarChart3, TrendingUp, Award, Activity, DollarSign, Layers, Sun, Moon, Download } from 'lucide-react';
 import { getDrafts, deleteDraft } from '../utils/offlineDb';
+import { triggerHaptic } from '../utils/haptic';
 
-export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, theme, toggleTheme }) {
+export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, theme, toggleTheme, showInstallOption, onTriggerInstall }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [company, setCompany] = useState({
     name: '', cnpj: '', logo_url: '',
@@ -489,6 +490,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
           </button>
           <button
             onClick={() => {
+              triggerHaptic(12);
               setMenuOpen(false);
               onCreateReport();
             }}
@@ -500,6 +502,18 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
         </nav>
 
         <div class="p-4 border-t border-slate-200 dark:border-slate-700 space-y-2">
+          {/* Botão de Instalação (se elegível e não instalado) */}
+          {showInstallOption && (
+            <button
+              onClick={onTriggerInstall}
+              type="button"
+              class="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white border border-primary-500/20 py-2.5 rounded-xl text-sm font-bold shadow-md transition-all animate-pulse mb-2"
+            >
+              <Download size={15} />
+              <span>Instalar Aplicativo</span>
+            </button>
+          )}
+
           {/* Alternador de Tema */}
           <button
             onClick={toggleTheme}
@@ -511,7 +525,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
           </button>
 
           <button
-            onClick={onLogout}
+            onClick={() => { triggerHaptic(12); onLogout(); }}
             class="w-full flex items-center justify-center space-x-2 bg-slate-100 hover:bg-red-500/10 hover:text-red-600 dark:bg-slate-700/50 dark:hover:bg-red-500/10 dark:hover:text-red-200 border border-slate-200 dark:border-slate-600/50 dark:hover:border-red-500/20 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
           >
             <LogOut size={16} />
@@ -1053,14 +1067,14 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                             <td class="px-6 py-4 text-center">
                               <div class="flex items-center justify-center space-x-2">
                                 <button
-                                  onClick={() => onViewReport(r.id)}
+                                  onClick={() => { triggerHaptic(10); onViewReport(r.id); }}
                                   class="p-2 text-primary-400 hover:text-white bg-slate-950/20 hover:bg-primary-600 border border-slate-700/60 hover:border-primary-500 rounded-lg transition-all"
                                   title="Ver Relatório / Exportar PDF"
                                 >
                                   <Eye size={16} />
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteReport(r.id)}
+                                  onClick={() => { triggerHaptic(15); handleDeleteReport(r.id); }}
                                   class="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 bg-slate-950/20 hover:bg-red-500/10 border border-slate-700/60 hover:border-red-500/20 rounded-lg transition-all"
                                   title="Excluir Relatório"
                                 >

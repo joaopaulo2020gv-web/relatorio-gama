@@ -570,57 +570,57 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                 {/* Grid de KPIs */}
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {/* Card 1: Faturamento */}
-                  <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
+                  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
                     <div class="absolute w-24 h-24 bg-emerald-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-110 transition-transform duration-300"></div>
                     <div class="space-y-1">
-                      <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Faturamento Total</span>
-                      <div class="text-xl font-black text-emerald-400">
+                      <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Faturamento Total</span>
+                      <div class="text-xl font-black text-emerald-600 dark:text-emerald-400">
                         {faturamentoTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </div>
-                      <p class="text-[10px] text-slate-500 font-semibold">Receitas consolidadas</p>
+                      <p class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">Receitas consolidadas</p>
                     </div>
-                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-md">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-md">
                       <DollarSign size={20} />
                     </div>
                   </div>
 
                   {/* Card 2: Área Aplicada */}
-                  <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
+                  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
                     <div class="absolute w-24 h-24 bg-primary-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-110 transition-transform duration-300"></div>
                     <div class="space-y-1">
-                      <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Área Pulverizada</span>
-                      <div class="text-xl font-black text-white">{totalArea.toFixed(1).replace('.', ',')} ha</div>
-                      <p class="text-[10px] text-slate-500 font-semibold">Total trabalhado</p>
+                      <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Área Pulverizada</span>
+                      <div class="text-xl font-black text-slate-800 dark:text-white">{totalArea.toFixed(1).replace('.', ',')} ha</div>
+                      <p class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">Total trabalhado</p>
                     </div>
-                    <div class="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-400 flex items-center justify-center border border-primary-500/20 shadow-md">
+                    <div class="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center border border-primary-500/20 shadow-md">
                       <TrendingUp size={20} />
                     </div>
                   </div>
 
                   {/* Card 3: Total Laudos */}
-                  <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
+                  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
                     <div class="absolute w-24 h-24 bg-blue-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-110 transition-transform duration-300"></div>
                     <div class="space-y-1">
-                      <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Relatórios Emitidos</span>
-                      <div class="text-xl font-black text-white">{totalLaudos}</div>
-                      <p class="text-[10px] text-slate-500 font-semibold">Documentos gerados</p>
+                      <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Relatórios Emitidos</span>
+                      <div class="text-xl font-black text-slate-800 dark:text-white">{totalLaudos}</div>
+                      <p class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">Documentos gerados</p>
                     </div>
-                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/20 shadow-md">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20 shadow-md">
                       <FileText size={20} />
                     </div>
                   </div>
 
                   {/* Card 4: Ticket Médio / ha */}
-                  <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
+                  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
                     <div class="absolute w-24 h-24 bg-amber-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-110 transition-transform duration-300"></div>
                     <div class="space-y-1">
-                      <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Valor Médio / ha</span>
-                      <div class="text-xl font-black text-amber-400">
+                      <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Valor Médio / ha</span>
+                      <div class="text-xl font-black text-amber-700 dark:text-amber-400">
                         {ticketMedioHa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </div>
-                      <p class="text-[10px] text-slate-500 font-semibold">Valor médio por hectare</p>
+                      <p class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">Valor médio por hectare</p>
                     </div>
-                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20 shadow-md">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 shadow-md">
                       <Activity size={20} />
                     </div>
                   </div>

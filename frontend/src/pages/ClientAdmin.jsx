@@ -235,7 +235,19 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
           setHasInitialCnpj(false);
         }
         if (compData.company.logo_url) {
-          setLogoPreview(compData.company.logo_url);
+          // Pré-valida a URL antes de exibir, evitando ícone de imagem quebrada
+          const testImg = new window.Image();
+          testImg.onload = () => {
+            setLogoPreview(compData.company.logo_url);
+            setLogoError(false);
+          };
+          testImg.onerror = () => {
+            setLogoPreview('');
+            setLogoError(false); // mantém false → exibe placeholder limpo
+          };
+          testImg.src = compData.company.logo_url;
+        } else {
+          setLogoPreview('');
           setLogoError(false);
         }
       }

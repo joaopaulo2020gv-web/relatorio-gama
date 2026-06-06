@@ -796,7 +796,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
   };
 
   return (
-    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-850 dark:text-slate-100 font-sans pb-12 transition-colors duration-200">
+    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans pb-12 transition-colors duration-200">
       {/* Header Wizard */}
       <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/60 px-6 py-4 flex items-center justify-between sticky top-0 z-30 transition-colors duration-200">
         <div class="flex items-center space-x-3">

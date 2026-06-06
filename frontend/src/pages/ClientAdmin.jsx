@@ -666,7 +666,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
           </button>
           <button 
             onClick={() => setMenuOpen(!menuOpen)}
-            class="p-2 text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-white focus:outline-none transition-colors"
+            class="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white focus:outline-none transition-colors"
             aria-label="Abrir menu"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1830,7 +1830,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
       {/* Modal de Reset de Senha do Piloto */}
       {selectedPilotForPassword && (
         <div class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div class="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-700/60 w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-4 text-slate-800 dark:text-slate-100">
+          <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-4 text-slate-800 dark:text-slate-100">
             <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700/60 pb-3">
               <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
                 <Key size={18} class="text-primary-500" />

@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 
 export default function Login({ onLoginSuccess, theme, toggleTheme }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState(() => localStorage.getItem('gama_remember_username') || '');
+  const [password, setPassword] = useState(() => localStorage.getItem('gama_remember_password') || '');
+  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('gama_remember_me') === 'true');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -33,6 +34,16 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
       // Salvar token e dados do usuário
       localStorage.setItem('gama_token', data.token);
       localStorage.setItem('gama_user', JSON.stringify(data.user));
+
+      if (rememberMe) {
+        localStorage.setItem('gama_remember_username', username);
+        localStorage.setItem('gama_remember_password', password);
+        localStorage.setItem('gama_remember_me', 'true');
+      } else {
+        localStorage.removeItem('gama_remember_username');
+        localStorage.removeItem('gama_remember_password');
+        localStorage.setItem('gama_remember_me', 'false');
+      }
 
       onLoginSuccess(data.user);
     } catch (err) {
@@ -81,7 +92,9 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
             </label>
             <input
               id="username"
+              name="username"
               type="text"
+              autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Digite seu usuário"
@@ -95,12 +108,26 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
             </label>
             <input
               id="password"
+              name="password"
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Digite sua senha"
               class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500/50 transition-all font-medium"
             />
+          </div>
+
+          <div class="flex items-center justify-between">
+            <label class="flex items-center space-x-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                class="w-4 h-4 text-primary-600 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded focus:ring-primary-500/50 focus:ring-offset-0 focus:ring-1"
+              />
+              <span class="text-xs font-semibold text-slate-600 dark:text-slate-300">Lembrar de mim</span>
+            </label>
           </div>
 
           <button

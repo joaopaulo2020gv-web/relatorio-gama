@@ -34,6 +34,21 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileError, setProfileError] = useState('');
 
+  // Filtro por Cliente no Dashboard
+  const [selectedClientFilter, setSelectedClientFilter] = useState('Todos');
+
+  // Clientes únicos extraídos dinamicamente
+  const uniqueClients = React.useMemo(() => {
+    const clients = reports.map(r => r.client_name ? r.client_name.trim() : '').filter(Boolean);
+    return ['Todos', ...new Set(clients)];
+  }, [reports]);
+
+  // Relatórios filtrados para o Dashboard
+  const dashboardReports = React.useMemo(() => {
+    if (selectedClientFilter === 'Todos') return reports;
+    return reports.filter(r => r.client_name && r.client_name.trim() === selectedClientFilter);
+  }, [reports, selectedClientFilter]);
+
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCulture, setActiveCulture] = useState('Todos');
@@ -554,14 +569,14 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
 
 
   // --- Estatísticas do Dashboard ---
-  const totalLaudos = reports.length;
-  const totalArea = reports.reduce((sum, r) => sum + (parseFloat(r.total_area) || 0), 0);
-  const faturamentoTotal = reports.reduce((sum, r) => sum + (parseFloat(r.total_price) || 0), 0);
+  const totalLaudos = dashboardReports.length;
+  const totalArea = dashboardReports.reduce((sum, r) => sum + (parseFloat(r.total_area) || 0), 0);
+  const faturamentoTotal = dashboardReports.reduce((sum, r) => sum + (parseFloat(r.total_price) || 0), 0);
   const ticketMedioHa = totalArea > 0 ? (faturamentoTotal / totalArea) : 0;
 
   // 1. Performance por Piloto
   const pilotStatsMap = {};
-  reports.forEach(r => {
+  dashboardReports.forEach(r => {
     const pilotName = r.pilot_name || 'Desconhecido';
     if (!pilotStatsMap[pilotName]) {
       pilotStatsMap[pilotName] = { name: pilotName, area: 0, revenue: 0, count: 0 };
@@ -574,7 +589,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
 
   // 2. Mix de Culturas
   const cultureStatsMap = {};
-  reports.forEach(r => {
+  dashboardReports.forEach(r => {
     const culture = r.culture || 'Outras';
     if (!cultureStatsMap[culture]) {
       cultureStatsMap[culture] = { name: culture, area: 0, count: 0 };
@@ -585,7 +600,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
   const cultureMix = Object.values(cultureStatsMap).sort((a, b) => b.area - a.area);
 
   // 3. Atividades Recentes
-  const recentReports = [...reports].slice(0, 3);
+  const recentReports = [...dashboardReports].slice(0, 3);
 
   return (
     <div 
@@ -850,6 +865,30 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                     <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-primary-600/20 text-primary-400 border border-primary-500/25">
                       Atualizado em Tempo Real
                     </span>
+                  </div>
+                </div>
+
+                {/* Filtro por Cliente */}
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-4 rounded-2xl gap-3 shadow-md">
+                  <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-primary-600/10 text-primary-600 dark:text-primary-400 flex items-center justify-center border border-primary-500/20">
+                      <Search size={16} />
+                    </div>
+                    <div>
+                      <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider block">Filtro de Análise</span>
+                      <span class="text-xs font-semibold text-slate-800 dark:text-slate-200">Selecione um cliente para detalhar os indicadores</span>
+                    </div>
+                  </div>
+                  <div class="w-full sm:w-64">
+                    <select
+                      value={selectedClientFilter}
+                      onChange={(e) => { triggerHaptic(8); setSelectedClientFilter(e.target.value); }}
+                      class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-primary-500 transition-all cursor-pointer"
+                    >
+                      {uniqueClients.map(client => (
+                        <option key={client} value={client}>{client}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

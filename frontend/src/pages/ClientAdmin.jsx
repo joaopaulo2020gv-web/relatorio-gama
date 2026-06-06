@@ -1189,27 +1189,37 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                     
                     <div class="flex flex-col md:flex-row md:space-x-6 space-y-4 md:space-y-0 items-center">
                       {/* Upload de Logo */}
-                      <div class="flex flex-col items-center space-y-3">
-                        <div class="w-28 h-28 border-2 border-dashed border-slate-350 dark:border-slate-700 rounded-2xl flex items-center justify-center overflow-hidden bg-slate-100 dark:bg-slate-900 relative p-2">
-                          {logoPreview && !logoError ? (
-                            <img 
-                              src={logoPreview} 
-                              alt="Logo da empresa" 
-                              onError={() => setLogoError(true)} 
-                              class="w-full h-full object-contain" 
-                            />
-                          ) : (
-                            <div class="flex flex-col items-center space-y-1.5 text-center text-slate-400 dark:text-slate-500">
-                              <Upload size={20} />
-                              <span class="text-[10px] font-bold uppercase tracking-wider">Enviar Logo</span>
-                            </div>
-                          )}
-                        </div>
-                        <label class="cursor-pointer flex items-center space-x-2 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 px-3 py-1.5 rounded-xl text-xs font-bold transition-all">
-                          <Upload size={14} />
-                          <span>Enviar Logo</span>
+                      <div class="flex flex-col items-center space-y-2">
+                        <label class="cursor-pointer group relative">
+                          <div class="w-32 h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-900/80 relative transition-all duration-300 group-hover:border-primary-500 group-hover:shadow-lg group-hover:shadow-primary-500/10">
+                            {logoPreview && !logoError ? (
+                              <>
+                                <img 
+                                  src={logoPreview} 
+                                  alt="Logo da empresa" 
+                                  onError={() => setLogoError(true)} 
+                                  class="w-full h-full object-contain transition-all duration-300 group-hover:opacity-50" 
+                                />
+                                <div class="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                  <Upload size={22} class="text-primary-400" />
+                                  <span class="text-[10px] font-bold text-primary-400 mt-1 uppercase tracking-wider">Trocar</span>
+                                </div>
+                              </>
+                            ) : (
+                              <div class="flex flex-col items-center space-y-2 text-center px-2">
+                                <div class="w-10 h-10 rounded-xl bg-primary-500/10 dark:bg-primary-500/15 flex items-center justify-center group-hover:bg-primary-500/20 transition-colors">
+                                  <Upload size={18} class="text-primary-500 dark:text-primary-400" />
+                                </div>
+                                <div>
+                                  <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block leading-tight">Logo da Empresa</span>
+                                  <span class="text-[9px] text-slate-400 dark:text-slate-600 block mt-0.5">Clique para enviar</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                           <input type="file" accept="image/*" onChange={handleLogoChange} class="hidden" />
                         </label>
+                        <span class="text-[10px] text-slate-400 dark:text-slate-500 font-medium">PNG, JPG ou SVG</span>
                       </div>
 
                       {/* Nome e CNPJ */}

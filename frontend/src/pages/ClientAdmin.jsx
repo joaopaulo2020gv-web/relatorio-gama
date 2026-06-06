@@ -91,6 +91,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
   // Estados dos formulários
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState('');
+  const [logoError, setLogoError] = useState(false);
   const [companySuccess, setCompanySuccess] = useState('');
   const [companyError, setCompanyError] = useState('');
 
@@ -235,6 +236,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
         }
         if (compData.company.logo_url) {
           setLogoPreview(compData.company.logo_url);
+          setLogoError(false);
         }
       }
 
@@ -387,6 +389,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
     if (file) {
       setLogoFile(file);
       setLogoPreview(URL.createObjectURL(file));
+      setLogoError(false);
     }
   };
 
@@ -428,6 +431,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
       if (data.logo_url) {
         setCompany(prev => ({ ...prev, logo_url: data.logo_url }));
         setLogoPreview(data.logo_url);
+        setLogoError(false);
       }
       fetchCompanyData();
     } catch (err) {
@@ -1186,11 +1190,19 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                     <div class="flex flex-col md:flex-row md:space-x-6 space-y-4 md:space-y-0 items-center">
                       {/* Upload de Logo */}
                       <div class="flex flex-col items-center space-y-3">
-                        <div class="w-28 h-28 border-2 border-dashed border-slate-700 rounded-2xl flex items-center justify-center overflow-hidden bg-slate-900 relative">
-                          {logoPreview ? (
-                            <img src={logoPreview} alt="Logo da empresa" class="w-full h-full object-contain" />
+                        <div class="w-28 h-28 border-2 border-dashed border-slate-350 dark:border-slate-700 rounded-2xl flex items-center justify-center overflow-hidden bg-slate-100 dark:bg-slate-900 relative p-2">
+                          {logoPreview && !logoError ? (
+                            <img 
+                              src={logoPreview} 
+                              alt="Logo da empresa" 
+                              onError={() => setLogoError(true)} 
+                              class="w-full h-full object-contain" 
+                            />
                           ) : (
-                            <span class="text-[10px] text-slate-500 font-semibold">Sem Logotipo</span>
+                            <div class="flex flex-col items-center space-y-1.5 text-center text-slate-400 dark:text-slate-500">
+                              <Upload size={20} />
+                              <span class="text-[10px] font-bold uppercase tracking-wider">Enviar Logo</span>
+                            </div>
                           )}
                         </div>
                         <label class="cursor-pointer flex items-center space-x-2 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 px-3 py-1.5 rounded-xl text-xs font-bold transition-all">

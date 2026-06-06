@@ -1250,10 +1250,10 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
       </main>
 
       {/* Barra de Navegação Inferior Fixa (Exclusiva Mobile) */}
-      <div class="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800/80 py-2.5 px-6 flex items-center justify-around z-50 md:hidden shadow-lg">
+      <div class="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800/80 py-2 px-6 flex items-center justify-around z-50 md:hidden shadow-lg">
         <button
           onClick={() => { triggerHaptic(8); setActiveTab('dashboard'); }}
-          class={`flex flex-col items-center justify-center transition-all active:scale-95 space-y-1 ${
+          class={`flex flex-col items-center justify-center transition-all active:scale-95 space-y-1 focus:outline-none ${
             activeTab === 'dashboard' ? 'text-primary-600 dark:text-primary-450' : 'text-slate-500 dark:text-slate-400'
           }`}
         >
@@ -1263,7 +1263,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
 
         <button
           onClick={() => { triggerHaptic(8); setActiveTab('pilots'); }}
-          class={`flex flex-col items-center justify-center transition-all active:scale-95 space-y-1 ${
+          class={`flex flex-col items-center justify-center transition-all active:scale-95 space-y-1 focus:outline-none ${
             activeTab === 'pilots' ? 'text-primary-600 dark:text-primary-450' : 'text-slate-500 dark:text-slate-400'
           }`}
         >
@@ -1273,14 +1273,17 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
 
         <button
           onClick={() => { triggerHaptic(12); onCreateReport(); }}
-          class="flex flex-col items-center justify-center -translate-y-4 w-12 h-12 rounded-full bg-gradient-to-tr from-primary-600 to-emerald-500 text-white shadow-lg shadow-primary-500/30 border-4 border-slate-50 dark:border-slate-900 active:scale-95 transition-all"
+          class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-450 transition-all active:scale-95 space-y-1 focus:outline-none"
         >
-          <Plus size={22} />
+          <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-primary-600 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-primary-500/20">
+            <Plus size={16} />
+          </div>
+          <span class="text-[9px] font-bold">Criar</span>
         </button>
 
         <button
           onClick={() => { triggerHaptic(8); setActiveTab('reports'); }}
-          class={`flex flex-col items-center justify-center transition-all active:scale-95 space-y-1 ${
+          class={`flex flex-col items-center justify-center transition-all active:scale-95 space-y-1 focus:outline-none ${
             activeTab === 'reports' ? 'text-primary-600 dark:text-primary-450' : 'text-slate-500 dark:text-slate-400'
           }`}
         >
@@ -1290,7 +1293,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
 
         <button
           onClick={() => { triggerHaptic(8); setActiveTab('settings'); }}
-          class={`flex flex-col items-center justify-center transition-all active:scale-95 space-y-1 ${
+          class={`flex flex-col items-center justify-center transition-all active:scale-95 space-y-1 focus:outline-none ${
             activeTab === 'settings' ? 'text-primary-600 dark:text-primary-450' : 'text-slate-500 dark:text-slate-400'
           }`}
         >

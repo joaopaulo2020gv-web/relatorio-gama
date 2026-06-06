@@ -1472,7 +1472,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                         <tbody class="divide-y divide-slate-700/40">
                           {pilots.map(p => (
                             <tr key={p.id} class="hover:bg-slate-700/10">
-                              <td class="px-6 py-4 font-semibold text-white">{p.name}</td>
+                              <td class="px-6 py-4 font-semibold text-slate-800 dark:text-white">{p.name}</td>
                               <td class="px-6 py-4 text-slate-300 text-sm font-semibold">{p.username}</td>
                               <td class="px-6 py-4 text-slate-400 text-sm">{new Date(p.created_at).toLocaleDateString('pt-BR')}</td>
                               <td class="px-6 py-4 text-center">

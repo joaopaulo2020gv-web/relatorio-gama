@@ -714,7 +714,7 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
       </main>
 
       {/* Barra de Navegação Inferior Fixa (Exclusiva Mobile) */}
-      <div class="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800/80 py-2 px-6 flex items-center justify-around z-50 md:hidden shadow-lg">
+      <div class="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800/80 py-2 px-6 flex items-center justify-around z-30 md:hidden shadow-lg">
         <button
           onClick={() => {
             triggerHaptic(8);

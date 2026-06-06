@@ -48,6 +48,18 @@ export default function App() {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
+  // Solicitar permissão de notificação para Sincronização em Background do PWA
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      const timer = setTimeout(() => {
+        Notification.requestPermission().then(permission => {
+          console.log('Permissão de notificação concedida:', permission);
+        });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   // Sincroniza o histórico do navegador quando a página interna do React muda
   useEffect(() => {
     if (!user) return; // Não gerencia histórico se não estiver autenticado

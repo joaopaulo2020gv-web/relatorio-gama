@@ -33,16 +33,18 @@ export async function saveDraft(draft) {
     const transaction = db.transaction([STORE_NAME], 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
     
-    // Adiciona timestamp de criação local para controle
+    // Adiciona timestamp de criação local e o token de autenticação para o Service Worker
     const draftWithTime = {
       ...draft,
-      savedAt: new Date().toISOString()
+      savedAt: new Date().toISOString(),
+      token: localStorage.getItem('gama_token')
     };
 
     const request = store.put(draftWithTime);
 
     request.onsuccess = (event) => {
       console.log('Rascunho salvo offline com ID:', event.target.result);
+      registerSync(); // Registra o sincronismo em background no Service Worker
       resolve(event.target.result);
     };
 
@@ -90,4 +92,17 @@ export async function deleteDraft(id) {
       reject(event.target.error);
     };
   });
+}
+
+// Registra o evento de sincronização em segundo plano no Service Worker
+export async function registerSync() {
+  if ('serviceWorker' in navigator && 'SyncManager' in window) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.sync.register('sync-reports');
+      console.log('Sincronização em segundo plano registrada com sucesso ("sync-reports")');
+    } catch (err) {
+      console.warn('Background Sync não pôde ser registrado:', err);
+    }
+  }
 }

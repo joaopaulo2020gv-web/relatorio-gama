@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { Sun, Moon, Fingerprint } from 'lucide-react';
 import { triggerHaptic } from '../utils/haptic';
 

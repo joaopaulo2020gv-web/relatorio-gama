@@ -279,7 +279,7 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
       </header>
 
       {/* Main Container */}
-      <main class="max-w-5xl mx-auto p-6 space-y-8">
+      <main class="max-w-5xl mx-auto p-6 pb-24 md:pb-6 space-y-8">
         
         {/* Banner de Sincronização Offline */}
         {offlineDrafts.length > 0 && (
@@ -712,6 +712,54 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
           )}
         </section>
       </main>
+
+      {/* Barra de Navegação Inferior Fixa (Exclusiva Mobile) */}
+      <div class="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800/80 py-2.5 px-6 flex items-center justify-around z-50 md:hidden shadow-lg">
+        <button
+          onClick={() => {
+            triggerHaptic(8);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-450 transition-all active:scale-95 space-y-1"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          <span class="text-[9px] font-bold">Painel</span>
+        </button>
+
+        <button
+          onClick={() => { triggerHaptic(12); onCreateReport(); }}
+          class="flex flex-col items-center justify-center -translate-y-4 w-12 h-12 rounded-full bg-gradient-to-tr from-primary-600 to-emerald-500 text-white shadow-lg shadow-primary-500/30 border-4 border-slate-50 dark:border-slate-900 active:scale-95 transition-all"
+        >
+          <Plus size={22} />
+        </button>
+
+        <button
+          onClick={toggleTheme}
+          class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-450 transition-all active:scale-95 space-y-1"
+        >
+          {theme === 'dark' ? (
+            <>
+              <Sun size={19} />
+              <span class="text-[9px] font-bold">Claro</span>
+            </>
+          ) : (
+            <>
+              <Moon size={19} />
+              <span class="text-[9px] font-bold">Escuro</span>
+            </>
+          )}
+        </button>
+
+        <button
+          onClick={() => { triggerHaptic(12); onLogout(); }}
+          class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-all active:scale-95 space-y-1"
+        >
+          <LogOut size={19} />
+          <span class="text-[9px] font-bold">Sair</span>
+        </button>
+      </div>
     </div>
   );
 }

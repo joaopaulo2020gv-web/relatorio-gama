@@ -537,7 +537,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
       </aside>
 
       {/* Main Panel Content */}
-      <main class="flex-1 p-6 md:overflow-y-auto md:max-h-screen no-scrollbar">
+      <main class="flex-1 p-6 pb-24 md:pb-6 md:overflow-y-auto md:max-h-screen no-scrollbar">
         
         {loading ? (
           <div class="text-center py-12 text-slate-400">Carregando informações...</div>
@@ -1248,6 +1248,56 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
           </>
         )}
       </main>
+
+      {/* Barra de Navegação Inferior Fixa (Exclusiva Mobile) */}
+      <div class="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800/80 py-2.5 px-6 flex items-center justify-around z-50 md:hidden shadow-lg">
+        <button
+          onClick={() => { triggerHaptic(8); setActiveTab('dashboard'); }}
+          class={`flex flex-col items-center justify-center transition-all active:scale-95 space-y-1 ${
+            activeTab === 'dashboard' ? 'text-primary-600 dark:text-primary-450' : 'text-slate-500 dark:text-slate-400'
+          }`}
+        >
+          <BarChart3 size={18} />
+          <span class="text-[9px] font-bold">Painel</span>
+        </button>
+
+        <button
+          onClick={() => { triggerHaptic(8); setActiveTab('pilots'); }}
+          class={`flex flex-col items-center justify-center transition-all active:scale-95 space-y-1 ${
+            activeTab === 'pilots' ? 'text-primary-600 dark:text-primary-450' : 'text-slate-500 dark:text-slate-400'
+          }`}
+        >
+          <Users size={18} />
+          <span class="text-[9px] font-bold">Pilotos</span>
+        </button>
+
+        <button
+          onClick={() => { triggerHaptic(12); onCreateReport(); }}
+          class="flex flex-col items-center justify-center -translate-y-4 w-12 h-12 rounded-full bg-gradient-to-tr from-primary-600 to-emerald-500 text-white shadow-lg shadow-primary-500/30 border-4 border-slate-50 dark:border-slate-900 active:scale-95 transition-all"
+        >
+          <Plus size={22} />
+        </button>
+
+        <button
+          onClick={() => { triggerHaptic(8); setActiveTab('reports'); }}
+          class={`flex flex-col items-center justify-center transition-all active:scale-95 space-y-1 ${
+            activeTab === 'reports' ? 'text-primary-600 dark:text-primary-450' : 'text-slate-500 dark:text-slate-400'
+          }`}
+        >
+          <FileText size={18} />
+          <span class="text-[9px] font-bold">Laudos</span>
+        </button>
+
+        <button
+          onClick={() => { triggerHaptic(8); setActiveTab('settings'); }}
+          class={`flex flex-col items-center justify-center transition-all active:scale-95 space-y-1 ${
+            activeTab === 'settings' ? 'text-primary-600 dark:text-primary-450' : 'text-slate-500 dark:text-slate-400'
+          }`}
+        >
+          <Save size={18} />
+          <span class="text-[9px] font-bold">Ajustes</span>
+        </button>
+      </div>
     </div>
   );
 }

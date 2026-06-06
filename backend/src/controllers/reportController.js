@@ -31,7 +31,8 @@ exports.createReport = (req, res) => {
     price_per_ha,
     total_price,
     pilot_signature,
-    client_signature
+    client_signature,
+    weather_forecast
   } = req.body;
 
   if (!client_name || !farm_name || !culture || !report_date) {
@@ -43,8 +44,8 @@ exports.createReport = (req, res) => {
       pilot_id, company_id, client_name, farm_name, client_email, client_document, farm_address, culture, report_date,
       flights_data, weather_temp, weather_humidity, weather_desc, delta_t,
       caldas_data, ph_photo_url, ph_desc, maps_data, observations,
-      total_area, price_per_ha, total_price, pilot_signature, client_signature
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      total_area, price_per_ha, total_price, pilot_signature, client_signature, weather_forecast
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       pilotId,
       companyId,
@@ -69,7 +70,8 @@ exports.createReport = (req, res) => {
       price_per_ha || 0,
       total_price || 0,
       pilot_signature || null,
-      client_signature || null
+      client_signature || null,
+      JSON.stringify(weather_forecast || [])
     ],
     function(err) {
       if (err) {
@@ -166,6 +168,11 @@ exports.getReportById = (req, res) => {
         row.flights_data = JSON.parse(row.flights_data);
         row.caldas_data = JSON.parse(row.caldas_data);
         row.maps_data = JSON.parse(row.maps_data);
+        if (row.weather_forecast) {
+          row.weather_forecast = JSON.parse(row.weather_forecast);
+        } else {
+          row.weather_forecast = [];
+        }
       } catch (e) {
         console.error('Erro ao fazer parse nos dados do relatório:', e);
       }

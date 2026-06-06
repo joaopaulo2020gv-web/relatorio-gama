@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Save, UserPlus, Users, FileText, Trash2, Eye, Upload, Plus, BarChart3, TrendingUp, Award, Activity, DollarSign, Layers, Sun, Moon, Download, Search } from 'lucide-react';
+import { LogOut, Save, UserPlus, Users, FileText, Trash2, Eye, Upload, Plus, BarChart3, TrendingUp, Award, Activity, DollarSign, Layers, Sun, Moon, Download, Search, Fingerprint } from 'lucide-react';
 import { getDrafts, deleteDraft } from '../utils/offlineDb';
 import { triggerHaptic } from '../utils/haptic';
 
@@ -22,6 +22,8 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCulture, setActiveCulture] = useState('Todos');
   const [activePilot, setActivePilot] = useState('Todos');
+  const [biometricsActive, setBiometricsActive] = useState(() => localStorage.getItem('gama_biometrics_active') === 'true');
+  const user = JSON.parse(localStorage.getItem('gama_user') || '{}');
 
   // Culturas únicas extraídas dinamicamente
   const uniqueCultures = React.useMemo(() => {
@@ -127,6 +129,65 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
       setOfflineDrafts(drafts);
     } catch (err) {
       console.error('Erro ao buscar rascunhos offline:', err);
+    }
+  };
+
+  const handleToggleBiometrics = async () => {
+    triggerHaptic(10);
+    
+    if (biometricsActive) {
+      if (window.confirm('Deseja desativar o login por biometria neste dispositivo?')) {
+        localStorage.removeItem('gama_biometrics_active');
+        localStorage.removeItem('gama_biometrics_token');
+        localStorage.removeItem('gama_biometrics_user_data');
+        setBiometricsActive(false);
+        alert('Biometria desativada com sucesso.');
+      }
+      return;
+    }
+
+    if (!window.PublicKeyCredential) {
+      alert('Autenticação biométrica não é suportada neste navegador.');
+      return;
+    }
+
+    try {
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+      
+      const userId = new Uint8Array(16);
+      window.crypto.getRandomValues(userId);
+
+      const publicKeyCredentialCreationOptions = {
+        challenge: challenge,
+        rp: { name: "AgroSkan" },
+        user: {
+          id: userId,
+          name: user.username || 'user',
+          displayName: user.name || 'Usuário'
+        },
+        pubKeyCredParams: [{ type: "public-key", alg: -7 }], // ES256
+        authenticatorSelection: {
+          authenticatorAttachment: "platform", // Forçar Face ID / Touch ID do celular
+          userVerification: "required"
+        },
+        timeout: 60000
+      };
+
+      const credential = await navigator.credentials.create({
+        publicKey: publicKeyCredentialCreationOptions
+      });
+
+      if (credential) {
+        localStorage.setItem('gama_biometrics_active', 'true');
+        localStorage.setItem('gama_biometrics_token', localStorage.getItem('gama_token'));
+        localStorage.setItem('gama_biometrics_user_data', localStorage.getItem('gama_user'));
+        setBiometricsActive(true);
+        alert('Face ID / Touch ID configurado com sucesso! Agora você poderá logar com apenas um toque no celular.');
+      }
+    } catch (err) {
+      console.error('Erro ao configurar biometria:', err);
+      alert('Seu dispositivo não aceitou ou não suporta a biometria. Certifique-se de que o Face ID/Touch ID está configurado no celular.');
     }
   };
 
@@ -495,6 +556,18 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
           </div>
         </div>
         <div class="flex items-center space-x-1">
+          {window.PublicKeyCredential && (
+            <button
+              onClick={handleToggleBiometrics}
+              type="button"
+              class={`p-2 transition-colors focus:outline-none ${
+                biometricsActive ? 'text-primary-500' : 'text-slate-550 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+              }`}
+              title={biometricsActive ? 'Biometria Ativa (Clique para desativar)' : 'Ativar Login por Biometria'}
+            >
+              <Fingerprint size={18} />
+            </button>
+          )}
           <button
             onClick={toggleTheme}
             type="button"
@@ -621,6 +694,22 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
             >
               <Download size={15} />
               <span>Instalar Aplicativo</span>
+            </button>
+          )}
+
+          {/* Botão de Biometria (se disponível) */}
+          {window.PublicKeyCredential && (
+            <button
+              onClick={handleToggleBiometrics}
+              type="button"
+              class={`w-full flex items-center justify-center space-x-2 border py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 focus:outline-none mb-2 ${
+                biometricsActive
+                  ? 'bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-200 dark:border-primary-500/35'
+                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600/50'
+              }`}
+            >
+              <Fingerprint size={15} />
+              <span>{biometricsActive ? 'Biometria Ativa' : 'Ativar Biometria'}</span>
             </button>
           )}
 

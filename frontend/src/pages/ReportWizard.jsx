@@ -298,6 +298,20 @@ const SignaturePad = ({ label, value, onChange }) => {
   );
 };
 
+// Fórmula psicrométrica de Stull para calcular o Delta T
+const calculateDeltaT = (temp, rh) => {
+  const t = parseFloat(temp);
+  const r = parseFloat(rh);
+  if (isNaN(t) || isNaN(r)) return 0;
+  // Fórmula de Stull para Temperatura de Bulbo Úmido (Tw)
+  const tw = t * Math.atan(0.151977 * Math.pow(r + 8.313659, 0.5))
+           + Math.atan(t + r)
+           - Math.atan(r - 1.676331)
+           + 0.00391838 * Math.pow(r, 1.5) * Math.atan(0.023101 * r)
+           - 4.686035;
+  return parseFloat((t - tw).toFixed(1));
+};
+
 export default function ReportWizard({ initialData, onCancel, onSaveSuccess, theme, toggleTheme }) {
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
@@ -368,6 +382,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
   const [weatherHumidity, setWeatherHumidity] = useState(initialData?.weather_humidity || 70);
   const [weatherDesc, setWeatherDesc] = useState(initialData?.weather_desc || 'As aplicações ficaram dentro dos limites de indicação.');
   const [deltaT, setDeltaT] = useState(initialData?.delta_t || 4);
+  const [weatherForecast, setWeatherForecast] = useState(initialData?.weather_forecast || []);
 
   // Passo 4: Caldas
   const [caldas, setCaldas] = useState(initialData?.caldas_data || [
@@ -427,18 +442,8 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
 
   // Calcular Delta T automaticamente usando a fórmula de Stull
   useEffect(() => {
-    const temp = parseFloat(weatherTemp);
-    const rh = parseFloat(weatherHumidity);
-    if (!isNaN(temp) && !isNaN(rh)) {
-      // Fórmula de Stull para Temperatura de Bulbo Úmido (Tw)
-      const tw = temp * Math.atan(0.151977 * Math.pow(rh + 8.313659, 0.5))
-               + Math.atan(temp + rh)
-               - Math.atan(rh - 1.676331)
-               + 0.00391838 * Math.pow(rh, 1.5) * Math.atan(0.023101 * rh)
-               - 4.686035;
-      const calculatedDeltaT = temp - tw;
-      setDeltaT(parseFloat(calculatedDeltaT.toFixed(1)));
-    }
+    const calculatedDeltaT = calculateDeltaT(weatherTemp, weatherHumidity);
+    setDeltaT(calculatedDeltaT);
   }, [weatherTemp, weatherHumidity]);
 
   const totalArea = flights.reduce((sum, item) => sum + (parseFloat(item.area) || 0), 0);
@@ -611,7 +616,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
       async (position) => {
         const { latitude, longitude } = position.coords;
         try {
-          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m`);
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&timezone=auto&forecast_days=1`);
           if (!res.ok) throw new Error("Falha ao buscar dados climáticos.");
           const data = await res.json();
           
@@ -630,6 +635,57 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
             
             const newDesc = `Clima capturado via GPS. Temperatura de ${temp}°C, umidade de ${humidity}%, vento de ${windSpeed} km/h direção ${cardinal}. As condições estavam adequadas de acordo com as especificações.`;
             setWeatherDesc(newDesc);
+
+            // Processar previsão das próximas 6 horas
+            if (data.hourly && data.hourly.time) {
+              const nowTime = new Date().getTime();
+              let closestIndex = 0;
+              let minDiff = Infinity;
+              for (let i = 0; i < data.hourly.time.length; i++) {
+                const t = new Date(data.hourly.time[i]).getTime();
+                const diff = Math.abs(t - nowTime);
+                if (diff < minDiff) {
+                  minDiff = diff;
+                  closestIndex = i;
+                }
+              }
+
+              const forecastList = [];
+              for (let i = 0; i < 6; i++) {
+                const index = closestIndex + i;
+                if (index < data.hourly.time.length) {
+                  const timeStr = data.hourly.time[index];
+                  const hTemp = data.hourly.temperature_2m[index];
+                  const hHum = data.hourly.relative_humidity_2m[index];
+                  const hWindSpeed = data.hourly.wind_speed_10m[index];
+                  const hWindDir = data.hourly.wind_direction_10m[index];
+                  
+                  const hDeltaT = calculateDeltaT(hTemp, hHum);
+                  const hDirIdx = Math.round(((hWindDir % 360) / 45)) % 8;
+                  const hCardinal = directions[hDirIdx];
+                  
+                  let hStatus = 'Inadequado';
+                  if (hDeltaT >= 2 && hDeltaT <= 8) {
+                    hStatus = 'Ideal';
+                  } else if (hDeltaT > 8 && hDeltaT <= 10) {
+                    hStatus = 'Marginal';
+                  }
+
+                  const formattedHour = new Date(timeStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                  forecastList.push({
+                    time: formattedHour,
+                    temp: hTemp,
+                    humidity: hHum,
+                    windSpeed: hWindSpeed,
+                    cardinal: hCardinal,
+                    deltaT: hDeltaT,
+                    status: hStatus
+                  });
+                }
+              }
+              setWeatherForecast(forecastList);
+            }
           }
         } catch (err) {
           console.error("Erro ao buscar clima:", err);
@@ -672,6 +728,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
       weather_humidity: weatherHumidity,
       weather_desc: weatherDesc,
       delta_t: deltaT,
+      weather_forecast: weatherForecast,
       caldas_data: caldas,
       ph_photo_url: phPhotoUrl,
       ph_desc: phDesc,
@@ -1118,7 +1175,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
                     Condições Ideais para Aplicação
                   </div>
                 ) : deltaT > 8 && deltaT <= 10 ? (
-                  <div class="bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-lg text-xs font-bold">
+                  <div class="bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 px-3 py-1.5 rounded-lg text-xs font-bold">
                     Condições Marginais (Evaporação rápida)
                   </div>
                 ) : (
@@ -1128,6 +1185,43 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
                 )}
               </div>
             </div>
+
+            {/* Janela de Clima Horária */}
+            {weatherForecast && weatherForecast.length > 0 && (
+              <div class="space-y-3 p-5 bg-slate-900/30 border border-slate-700/60 rounded-2xl">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Janela Climática Recomendada (Previsão 6h)</h4>
+                  <span class="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">Open-Meteo GPS</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                  {weatherForecast.map((hourData, idx) => {
+                    let statusClass = "border-red-500/35 bg-red-950/10 text-red-400";
+                    if (hourData.status === 'Ideal') {
+                      statusClass = "border-emerald-500/35 bg-emerald-950/10 text-emerald-400";
+                    } else if (hourData.status === 'Marginal') {
+                      statusClass = "border-amber-500/35 bg-amber-950/10 text-amber-400";
+                    }
+
+                    return (
+                      <div 
+                        key={idx}
+                        className={`border rounded-xl p-2.5 flex flex-col justify-between items-center text-center transition-all hover:scale-[1.03] duration-150 ${statusClass}`}
+                      >
+                        <span class="text-xs font-black">{hourData.time}</span>
+                        <span class="text-[10px] font-bold mt-1 font-sans">{hourData.temp}°C | {hourData.humidity}%</span>
+                        <span class="text-[8px] opacity-75 mt-0.5 font-medium leading-tight">Vento: {hourData.windSpeed} km/h {hourData.cardinal}</span>
+                        <div class="mt-2 text-[10px] font-black px-1.5 py-0.5 rounded bg-black/35 border border-white/5">
+                          ΔT: {hourData.deltaT}
+                        </div>
+                        <span class="mt-1 text-[8px] font-extrabold uppercase tracking-wider">
+                          {hourData.status}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div>
               <label class="block text-slate-300 text-xs font-bold mb-1.5">Descrição Climática (Resumo)</label>

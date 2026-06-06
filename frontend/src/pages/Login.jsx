@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Fingerprint } from 'lucide-react';
+import { triggerHaptic } from '../utils/haptic';
 
 export default function Login({ onLoginSuccess, theme, toggleTheme }) {
   const [username, setUsername] = useState(() => localStorage.getItem('gama_remember_username') || '');
@@ -7,6 +7,50 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('gama_remember_me') === 'true');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const handleBiometricLogin = async () => {
+    if (!window.PublicKeyCredential) {
+      setError('Autenticação biométrica não é suportada neste navegador.');
+      return;
+    }
+
+    triggerHaptic(10);
+    setError('');
+    setLoading(true);
+
+    try {
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+      
+      const publicKeyCredentialRequestOptions = {
+        challenge: challenge,
+        userVerification: "required",
+        timeout: 60000
+      };
+
+      const assertion = await navigator.credentials.get({
+        publicKey: publicKeyCredentialRequestOptions
+      });
+
+      if (assertion) {
+        const token = localStorage.getItem('gama_biometrics_token');
+        const userData = localStorage.getItem('gama_biometrics_user_data');
+        if (token && userData) {
+          localStorage.setItem('gama_token', token);
+          localStorage.setItem('gama_user', userData);
+          triggerHaptic(15);
+          onLoginSuccess(JSON.parse(userData));
+        } else {
+          throw new Error('Sessão biométrica expirada. Faça login com usuário e senha para reativar.');
+        }
+      }
+    } catch (err) {
+      console.error('Falha na autenticação biométrica:', err);
+      setError('A validação biométrica falhou ou foi cancelada.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -137,6 +181,18 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
           >
             {loading ? 'Acessando plataforma...' : 'Entrar na Conta'}
           </button>
+
+          {localStorage.getItem('gama_biometrics_active') === 'true' && (
+            <button
+              type="button"
+              onClick={handleBiometricLogin}
+              disabled={loading}
+              class="w-full mt-3 py-3.5 bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-650 text-slate-700 dark:text-slate-200 font-bold rounded-xl border border-slate-200 dark:border-slate-600/50 flex items-center justify-center space-x-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none focus:outline-none"
+            >
+              <Fingerprint size={18} class="text-primary-500" />
+              <span>Entrar com Biometria</span>
+            </button>
+          )}
         </form>
 
         <div class="mt-8 text-center text-xs text-slate-400 dark:text-slate-500">

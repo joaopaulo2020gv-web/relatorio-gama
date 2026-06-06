@@ -4,6 +4,7 @@ import { getDrafts, deleteDraft } from '../utils/offlineDb';
 import { triggerHaptic } from '../utils/haptic';
 
 export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, theme, toggleTheme, showInstallOption, onTriggerInstall }) {
+  const user = JSON.parse(localStorage.getItem('gama_user') || '{}');
   const [menuOpen, setMenuOpen] = useState(false);
   const [company, setCompany] = useState({
     name: '', cnpj: '', logo_url: '',
@@ -54,7 +55,6 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
   const [activeCulture, setActiveCulture] = useState('Todos');
   const [activePilot, setActivePilot] = useState('Todos');
   const [biometricsActive, setBiometricsActive] = useState(() => localStorage.getItem('gama_biometrics_active') === 'true');
-  const user = JSON.parse(localStorage.getItem('gama_user') || '{}');
 
   // Culturas únicas extraídas dinamicamente
   const uniqueCultures = React.useMemo(() => {

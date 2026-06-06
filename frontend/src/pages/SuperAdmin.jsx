@@ -532,7 +532,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
                     {companies.map((company) => (
                       <tr key={company.id} class="hover:bg-slate-700/20 transition-colors">
                         <td class="px-6 py-4">
-                          <div class="font-bold text-white">{company.name}</div>
+                          <div class="font-bold text-slate-800 dark:text-white">{company.name}</div>
                           <div class="text-xs text-slate-400 font-semibold">{company.cnpj || 'CNPJ não informado'}</div>
                         </td>
                         <td class="px-6 py-4 font-semibold text-slate-300">
@@ -624,7 +624,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
                   <tbody class="divide-y divide-slate-700/50">
                     {plans.map((plan) => (
                       <tr key={plan.id} class="hover:bg-slate-700/20 transition-colors">
-                        <td class="px-6 py-4 font-bold text-white">
+                        <td class="px-6 py-4 font-bold text-slate-800 dark:text-white">
                           {plan.name}
                         </td>
                         <td class="px-6 py-4 text-slate-300 font-semibold">

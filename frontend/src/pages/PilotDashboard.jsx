@@ -29,6 +29,15 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [activeCulture, setActiveCulture] = useState('Todos');
+  const [activePeriod, setActivePeriod] = useState('Todos');
+
+  // Culturas únicas extraídas dinamicamente dos relatórios
+  const uniqueCultures = React.useMemo(() => {
+    const cultures = reports.map(r => r.culture ? r.culture.trim() : '').filter(Boolean);
+    const formatted = cultures.map(c => c.charAt(0).toUpperCase() + c.slice(1).toLowerCase());
+    return ['Todos', ...new Set(formatted)];
+  }, [reports]);
   const user = JSON.parse(localStorage.getItem('gama_user') || '{}');
 
   // Estados para o Pull-to-Refresh
@@ -267,12 +276,34 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
     area: cultureDataMap[name]
   })).sort((a, b) => b.area - a.area);
 
-  // Filtragem dos relatórios pelo campo de pesquisa
-  const filteredReports = reports.filter(r => 
-    (r.client_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (r.farm_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (r.culture || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtragem dos relatórios pelo campo de pesquisa, cultura e período
+  const filteredReports = reports.filter(r => {
+    const matchesSearch = 
+      (r.client_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.farm_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.culture || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesCulture = 
+      activeCulture === 'Todos' || 
+      (r.culture || '').toLowerCase() === activeCulture.toLowerCase();
+
+    const matchesPeriod = activePeriod === 'Todos' || (() => {
+      if (!r.report_date) return false;
+      const reportDate = new Date(r.report_date);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      reportDate.setHours(0,0,0,0);
+      
+      const diffTime = today - reportDate;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (activePeriod === '7d') return diffDays >= 0 && diffDays <= 7;
+      if (activePeriod === '30d') return diffDays >= 0 && diffDays <= 30;
+      return true;
+    })();
+
+    return matchesSearch && matchesCulture && matchesPeriod;
+  });
 
   return (
     <div 
@@ -671,6 +702,55 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
               </div>
             </div>
           </div>
+
+          {/* Chips de filtro rápido */}
+          {reports.length > 0 && (
+            <div class="px-6 py-3 bg-slate-50/50 dark:bg-slate-900/10 border-b border-slate-150 dark:border-slate-700/30 space-y-3">
+              {/* Filtro por Cultura */}
+              <div class="flex items-center space-x-2">
+                <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider select-none shrink-0 w-14">Cultura:</span>
+                <div class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 flex-1">
+                  {uniqueCultures.map(cult => (
+                    <button
+                      key={cult}
+                      onClick={() => { triggerHaptic(6); setActiveCulture(cult); }}
+                      class={`px-3 py-1 rounded-full text-xs font-bold transition-all border whitespace-nowrap focus:outline-none ${
+                        activeCulture === cult
+                          ? 'bg-primary-600 border-primary-500 text-white shadow-xs'
+                          : 'bg-white dark:bg-slate-800 border-slate-250 dark:border-slate-700/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-750'
+                      }`}
+                    >
+                      {cult}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Filtro por Período */}
+              <div class="flex items-center space-x-2">
+                <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider select-none shrink-0 w-14">Período:</span>
+                <div class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 flex-1">
+                  {[
+                    { id: 'Todos', label: 'Todos' },
+                    { id: '7d', label: 'Últimos 7 dias' },
+                    { id: '30d', label: 'Últimos 30 dias' }
+                  ].map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => { triggerHaptic(6); setActivePeriod(p.id); }}
+                      class={`px-3 py-1 rounded-full text-xs font-bold transition-all border whitespace-nowrap focus:outline-none ${
+                        activePeriod === p.id
+                          ? 'bg-primary-600 border-primary-500 text-white shadow-xs'
+                          : 'bg-white dark:bg-slate-800 border-slate-250 dark:border-slate-700/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-750'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <PilotReportsSkeleton />

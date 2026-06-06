@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Save, UserPlus, Users, FileText, Trash2, Eye, Upload, Plus, BarChart3, TrendingUp, Award, Activity, DollarSign, Layers, Sun, Moon, Download } from 'lucide-react';
+import { LogOut, Save, UserPlus, Users, FileText, Trash2, Eye, Upload, Plus, BarChart3, TrendingUp, Award, Activity, DollarSign, Layers, Sun, Moon, Download, Search } from 'lucide-react';
 import { getDrafts, deleteDraft } from '../utils/offlineDb';
 import { triggerHaptic } from '../utils/haptic';
 
@@ -19,6 +19,41 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, settings, pilots, reports
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeCulture, setActiveCulture] = useState('Todos');
+  const [activePilot, setActivePilot] = useState('Todos');
+
+  // Culturas únicas extraídas dinamicamente
+  const uniqueCultures = React.useMemo(() => {
+    const cultures = reports.map(r => r.culture ? r.culture.trim() : '').filter(Boolean);
+    const formatted = cultures.map(c => c.charAt(0).toUpperCase() + c.slice(1).toLowerCase());
+    return ['Todos', ...new Set(formatted)];
+  }, [reports]);
+
+  // Pilotos únicos extraídos dinamicamente
+  const uniquePilots = React.useMemo(() => {
+    const pilotNames = reports.map(r => r.pilot_name ? r.pilot_name.trim() : '').filter(Boolean);
+    return ['Todos', ...new Set(pilotNames)];
+  }, [reports]);
+
+  // Filtragem dos relatórios pelo campo de pesquisa, cultura e piloto
+  const filteredReports = reports.filter(r => {
+    const matchesSearch = 
+      (r.client_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.farm_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.culture || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.pilot_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesCulture = 
+      activeCulture === 'Todos' || 
+      (r.culture || '').toLowerCase() === activeCulture.toLowerCase();
+
+    const matchesPilot = 
+      activePilot === 'Todos' || 
+      (r.pilot_name || '').toLowerCase() === activePilot.toLowerCase();
+
+    return matchesSearch && matchesCulture && matchesPilot;
+  });
 
   // Estados dos formulários
   const [logoFile, setLogoFile] = useState(null);
@@ -1245,15 +1280,74 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                 )}
 
                 <div class="bg-slate-800 border border-slate-700/40 rounded-2xl overflow-hidden">
-                  <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between flex-wrap gap-4">
+                  <div class="px-6 py-5 border-b border-slate-700 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <h3 class="text-lg font-bold">Histórico de Relatórios da Empresa</h3>
-                    <button
-                      onClick={onCreateReport}
-                      class="flex items-center space-x-1.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all"
-                    >
-                      <span>Elaborar Relatório</span>
-                    </button>
+                    <div class="flex items-center gap-3 flex-wrap w-full md:w-auto">
+                      <div class="relative w-full md:w-60">
+                        <input
+                          type="text"
+                          placeholder="Buscar cliente, fazenda, piloto..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-primary-500 transition-all"
+                        />
+                        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
+                          <Search size={14} />
+                        </div>
+                      </div>
+                      <button
+                        onClick={onCreateReport}
+                        class="flex items-center space-x-1.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all w-full md:w-auto justify-center"
+                      >
+                        <span>Elaborar Relatório</span>
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Chips de filtro rápido */}
+                  {reports.length > 0 && (
+                    <div class="px-6 py-3 bg-slate-50/50 dark:bg-slate-900/10 border-b border-slate-150 dark:border-slate-700/30 space-y-3">
+                      {/* Filtro por Cultura */}
+                      <div class="flex items-center space-x-2">
+                        <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider select-none shrink-0 w-14">Cultura:</span>
+                        <div class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 flex-1">
+                          {uniqueCultures.map(cult => (
+                            <button
+                              key={cult}
+                              onClick={() => { triggerHaptic(6); setActiveCulture(cult); }}
+                              class={`px-3 py-1 rounded-full text-xs font-bold transition-all border whitespace-nowrap focus:outline-none ${
+                                activeCulture === cult
+                                  ? 'bg-primary-600 border-primary-500 text-white shadow-xs'
+                                  : 'bg-white dark:bg-slate-800 border-slate-250 dark:border-slate-700/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-750'
+                              }`}
+                            >
+                              {cult}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Filtro por Piloto */}
+                      <div class="flex items-center space-x-2">
+                        <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider select-none shrink-0 w-14">Piloto:</span>
+                        <div class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 flex-1">
+                          {uniquePilots.map(pilot => (
+                            <button
+                              key={pilot}
+                              onClick={() => { triggerHaptic(6); setActivePilot(pilot); }}
+                              class={`px-3 py-1 rounded-full text-xs font-bold transition-all border whitespace-nowrap focus:outline-none ${
+                                activePilot === pilot
+                                  ? 'bg-primary-600 border-primary-500 text-white shadow-xs'
+                                  : 'bg-white dark:bg-slate-800 border-slate-250 dark:border-slate-700/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-750'
+                              }`}
+                            >
+                              {pilot}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {reports.length === 0 ? (
                     <div class="p-12 text-center text-slate-400 space-y-4">
@@ -1265,55 +1359,117 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                         Elaborar Primeiro Relatório
                       </button>
                     </div>
-                  ) : (
-                    <div class="overflow-x-auto">
-                      <table class="w-full text-left border-collapse">
-                        <thead>
-                          <tr class="bg-slate-900/50 text-slate-400 text-xs font-bold uppercase border-b border-slate-700">
-                            <th class="px-6 py-3">Cliente / Fazenda</th>
-                            <th class="px-6 py-3">Data Aplicação</th>
-                            <th class="px-6 py-3">Área Total (ha)</th>
-                            <th class="px-6 py-3">Valor Total</th>
-                            <th class="px-6 py-3">Piloto Responsável</th>
-                            <th class="px-6 py-3 text-center">Ações</th>
-                          </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-700/40">
-                          {reports.map(r => (
-                            <tr key={r.id} class="hover:bg-slate-700/10">
-                              <td class="px-6 py-4">
-                                <div class="font-semibold text-white">{r.client_name}</div>
-                                <div class="text-xs text-slate-400 font-semibold">{r.farm_name}</div>
-                              </td>
-                              <td class="px-6 py-4 text-sm font-semibold text-slate-300">{new Date(r.report_date).toLocaleDateString('pt-BR')}</td>
-                              <td class="px-6 py-4 text-sm font-bold text-slate-300">{r.total_area} ha</td>
-                              <td class="px-6 py-4 text-sm font-black text-emerald-400">
-                                {r.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                              </td>
-                              <td class="px-6 py-4 text-sm font-semibold text-slate-300">{r.pilot_name}</td>
-                              <td class="px-6 py-4 text-center">
-                                <div class="flex items-center justify-center space-x-2">
-                                  <button
-                                    onClick={() => { triggerHaptic(10); onViewReport(r.id); }}
-                                    class="p-2 text-primary-400 hover:text-white bg-slate-950/20 hover:bg-primary-600 border border-slate-700/60 hover:border-primary-500 rounded-lg transition-all"
-                                    title="Ver Relatório / Exportar PDF"
-                                  >
-                                    <Eye size={16} />
-                                  </button>
-                                  <button
-                                    onClick={() => { triggerHaptic(15); handleDeleteReport(r.id); }}
-                                    class="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 bg-slate-950/20 hover:bg-red-500/10 border border-slate-700/60 hover:border-red-500/20 rounded-lg transition-all"
-                                    title="Excluir Relatório"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                  ) : filteredReports.length === 0 ? (
+                    <div class="p-16 text-center space-y-4">
+                      <div class="w-16 h-16 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto text-slate-400 dark:text-slate-500">
+                        <FileText size={28} />
+                      </div>
+                      <div class="text-slate-550 dark:text-slate-400 font-medium max-w-sm mx-auto">
+                        Nenhum relatório corresponde à sua busca ou filtros.
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      {/* Tabela para Desktop */}
+                      <div class="hidden md:block overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                          <thead>
+                            <tr class="bg-slate-900/50 text-slate-400 text-xs font-bold uppercase border-b border-slate-700">
+                              <th class="px-6 py-3">Cliente / Fazenda</th>
+                              <th class="px-6 py-3">Data Aplicação</th>
+                              <th class="px-6 py-3">Área Total (ha)</th>
+                              <th class="px-6 py-3">Valor Total</th>
+                              <th class="px-6 py-3">Piloto Responsável</th>
+                              <th class="px-6 py-3 text-center">Ações</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-slate-700/40">
+                            {filteredReports.map(r => (
+                              <tr key={r.id} class="hover:bg-slate-700/10">
+                                <td class="px-6 py-4">
+                                  <div class="font-semibold text-white">{r.client_name}</div>
+                                  <div class="text-xs text-slate-400 font-semibold">{r.farm_name}</div>
+                                </td>
+                                <td class="px-6 py-4 text-sm font-semibold text-slate-300">{new Date(r.report_date).toLocaleDateString('pt-BR')}</td>
+                                <td class="px-6 py-4 text-sm font-bold text-slate-300">{r.total_area} ha</td>
+                                <td class="px-6 py-4 text-sm font-black text-emerald-400">
+                                  {r.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                </td>
+                                <td class="px-6 py-4 text-sm font-semibold text-slate-300">{r.pilot_name}</td>
+                                <td class="px-6 py-4 text-center">
+                                  <div class="flex items-center justify-center space-x-2">
+                                    <button
+                                      onClick={() => { triggerHaptic(10); onViewReport(r.id); }}
+                                      class="p-2 text-primary-400 hover:text-white bg-slate-950/20 hover:bg-primary-600 border border-slate-700/60 hover:border-primary-500 rounded-lg transition-all"
+                                      title="Ver Relatório / Exportar PDF"
+                                    >
+                                      <Eye size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => { triggerHaptic(15); handleDeleteReport(r.id); }}
+                                      class="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 bg-slate-950/20 hover:bg-red-500/10 border border-slate-700/60 hover:border-red-500/20 rounded-lg transition-all"
+                                      title="Excluir Relatório"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Cards para Mobile */}
+                      <div class="grid grid-cols-1 gap-4 p-4 md:hidden">
+                        {filteredReports.map(r => (
+                          <div key={r.id} class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/40 p-4 rounded-2xl space-y-3">
+                            <div class="flex justify-between items-start">
+                              <div>
+                                <div class="font-extrabold text-sm text-slate-900 dark:text-white">{r.client_name}</div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400 font-bold">{r.farm_name}</div>
+                              </div>
+                              <span class="px-2.5 py-1 bg-primary-600/10 text-primary-500 dark:text-primary-400 rounded-lg text-[10px] font-black uppercase">Emitido</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-xs border-t border-b border-slate-200 dark:border-slate-700/30 py-2">
+                              <div>
+                                <span class="text-slate-400 block text-[9px] font-bold uppercase">Data</span>
+                                <span class="font-bold text-slate-800 dark:text-slate-200">{new Date(r.report_date).toLocaleDateString('pt-BR')}</span>
+                              </div>
+                              <div>
+                                <span class="text-slate-400 block text-[9px] font-bold uppercase">Área / Cultura</span>
+                                <span class="font-bold text-slate-800 dark:text-slate-200">{r.total_area} ha - {r.culture || 'N/A'}</span>
+                              </div>
+                              <div>
+                                <span class="text-slate-400 block text-[9px] font-bold uppercase">Piloto</span>
+                                <span class="font-medium text-slate-800 dark:text-slate-200">{r.pilot_name}</span>
+                              </div>
+                              <div>
+                                <span class="text-slate-400 block text-[9px] font-bold uppercase">Faturamento</span>
+                                <span class="font-black text-emerald-600 dark:text-emerald-400">
+                                  {r.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                </span>
+                              </div>
+                            </div>
+                            <div class="flex items-center justify-between pt-1">
+                              <button
+                                onClick={() => { triggerHaptic(10); onViewReport(r.id); }}
+                                class="flex-1 bg-primary-600 hover:bg-primary-500 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-all mr-2"
+                              >
+                                <Eye size={14} />
+                                <span>Visualizar / PDF</span>
+                              </button>
+                              <button
+                                onClick={() => { triggerHaptic(15); handleDeleteReport(r.id); }}
+                                class="p-2.5 text-slate-400 hover:text-red-500 rounded-xl hover:bg-red-500/10 border border-slate-200 dark:border-slate-700/40 transition-all"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
               </>

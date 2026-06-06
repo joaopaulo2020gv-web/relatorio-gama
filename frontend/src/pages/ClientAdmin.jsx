@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Save, UserPlus, Users, FileText, Trash2, Eye, Upload, Plus, BarChart3, TrendingUp, Award, Activity, DollarSign, Layers, Sun, Moon, Download, Search, Fingerprint } from 'lucide-react';
+import { LogOut, Save, UserPlus, Users, FileText, Trash2, Eye, Upload, Plus, BarChart3, TrendingUp, Award, Activity, DollarSign, Layers, Sun, Moon, Download, Search, Fingerprint, Key } from 'lucide-react';
 import { getDrafts, deleteDraft } from '../utils/offlineDb';
 import { triggerHaptic } from '../utils/haptic';
 
@@ -19,6 +19,21 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, settings, pilots, reports
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [hasInitialCnpj, setHasInitialCnpj] = useState(false);
+  
+  // Estados para redefinição de senha de pilotos
+  const [selectedPilotForPassword, setSelectedPilotForPassword] = useState(null);
+  const [newPilotPassword, setNewPilotPassword] = useState('');
+  const [pilotPasswordModalSuccess, setPilotPasswordModalSuccess] = useState('');
+  const [pilotPasswordModalError, setPilotPasswordModalError] = useState('');
+
+  // Estados para edição do perfil do administrador
+  const [adminName, setAdminName] = useState(user.name || '');
+  const [adminUsername, setAdminUsername] = useState(user.username || '');
+  const [adminCurrentPassword, setAdminCurrentPassword] = useState('');
+  const [adminNewPassword, setAdminNewPassword] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
+  const [profileError, setProfileError] = useState('');
+
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCulture, setActiveCulture] = useState('Todos');
@@ -485,6 +500,58 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
       console.error(err);
     }
   };
+
+  const handleUpdateAdminProfile = async (e) => {
+    e.preventDefault();
+    setProfileSuccess('');
+    setProfileError('');
+
+    if (!adminName.trim() || !adminUsername.trim()) {
+      setProfileError('Nome e usuário são obrigatórios.');
+      return;
+    }
+
+    if (adminNewPassword.trim() !== '' && !adminCurrentPassword.trim()) {
+      setProfileError('Você deve informar sua senha atual para definir uma nova.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('gama_token')}`
+        },
+        body: JSON.stringify({
+          name: adminName,
+          username: adminUsername,
+          currentPassword: adminCurrentPassword,
+          newPassword: adminNewPassword
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao atualizar dados de acesso.');
+      }
+
+      setProfileSuccess('Dados de perfil atualizados com sucesso!');
+      
+      // Atualizar cache de usuário logado
+      const updatedUser = { ...user, name: data.user.name, username: data.user.username };
+      localStorage.setItem('gama_user', JSON.stringify(updatedUser));
+      
+      setAdminCurrentPassword('');
+      setAdminNewPassword('');
+
+      // Recarrega informações
+      fetchCompanyData();
+    } catch (err) {
+      setProfileError(err.message);
+    }
+  };
+
 
   // --- Estatísticas do Dashboard ---
   const totalLaudos = reports.length;
@@ -1199,6 +1266,83 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                     Salvar Alterações
                   </button>
                 </form>
+
+                <div class="border-t border-slate-200 dark:border-slate-700/60 my-8"></div>
+
+                {/* Meus Dados de Acesso (Perfil) */}
+                <form onSubmit={handleUpdateAdminProfile} class="space-y-6">
+                  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-6 rounded-2xl space-y-4 shadow-lg">
+                    <h4 class="text-sm font-bold text-primary-400 border-b border-slate-700/60 pb-1 uppercase tracking-wider flex items-center space-x-2">
+                      <Fingerprint size={16} />
+                      <span>Meus Dados de Acesso (Perfil)</span>
+                    </h4>
+
+                    {profileSuccess && <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-200 px-4 py-3 rounded-xl text-sm">{profileSuccess}</div>}
+                    {profileError && <div class="bg-red-500/10 border border-red-500/20 text-red-650 dark:text-red-200 px-4 py-3 rounded-xl text-sm">{profileError}</div>}
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-slate-350 dark:text-slate-300 text-xs font-bold mb-1.5">Nome Completo *</label>
+                        <input
+                          type="text"
+                          required
+                          value={adminName}
+                          onChange={(e) => setAdminName(e.target.value)}
+                          placeholder="Ex: Seu Nome"
+                          class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-primary-500 focus:outline-none transition-all font-medium text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-slate-350 dark:text-slate-300 text-xs font-bold mb-1.5">Nome de Usuário (login) *</label>
+                        <input
+                          type="text"
+                          required
+                          value={adminUsername}
+                          onChange={(e) => setAdminUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))}
+                          placeholder="Ex: admin.empresa"
+                          class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-primary-500 focus:outline-none transition-all font-medium text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="border-t border-slate-200 dark:border-slate-700/60 pt-4">
+                      <span class="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-3 uppercase tracking-wider">Alterar Senha (Opcional)</span>
+                      
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label class="block text-slate-350 dark:text-slate-300 text-xs font-bold mb-1.5">Nova Senha</label>
+                          <input
+                            type="password"
+                            value={adminNewPassword}
+                            onChange={(e) => setAdminNewPassword(e.target.value)}
+                            placeholder="Deixe em branco para não alterar"
+                            class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-primary-500 focus:outline-none transition-all font-medium text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-slate-350 dark:text-slate-300 text-xs font-bold mb-1.5">
+                            Senha Atual {adminNewPassword.trim() !== '' ? '*' : ''}
+                          </label>
+                          <input
+                            type="password"
+                            required={adminNewPassword.trim() !== ''}
+                            value={adminCurrentPassword}
+                            onChange={(e) => setAdminCurrentPassword(e.target.value)}
+                            placeholder={adminNewPassword.trim() !== '' ? "Digite sua senha atual" : "Necessária apenas para nova senha"}
+                            class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-primary-500 focus:outline-none transition-all font-medium text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    class="w-full py-3.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white font-bold rounded-xl shadow-lg transition-all transform active:scale-[0.99]"
+                  >
+                    Atualizar Perfil
+                  </button>
+                </form>
               </div>
             )}
 
@@ -1293,12 +1437,22 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                               <td class="px-6 py-4 text-slate-300 text-sm font-semibold">{p.username}</td>
                               <td class="px-6 py-4 text-slate-400 text-sm">{new Date(p.created_at).toLocaleDateString('pt-BR')}</td>
                               <td class="px-6 py-4 text-center">
-                                <button
-                                  onClick={() => handleDeletePilot(p.id)}
-                                  class="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 bg-slate-950/20 hover:bg-red-500/10 border border-slate-700/60 hover:border-red-500/20 rounded-lg transition-all"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
+                                <div class="flex items-center justify-center space-x-2">
+                                  <button
+                                    onClick={() => { triggerHaptic(10); setSelectedPilotForPassword(p); }}
+                                    class="p-2 text-slate-400 hover:text-primary-600 dark:hover:text-primary-450 bg-slate-950/20 hover:bg-primary-500/10 border border-slate-700/60 hover:border-primary-500/20 rounded-lg transition-all"
+                                    title="Alterar Senha do Piloto"
+                                  >
+                                    <Key size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeletePilot(p.id)}
+                                    class="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 bg-slate-950/20 hover:bg-red-500/10 border border-slate-700/60 hover:border-red-500/20 rounded-lg transition-all"
+                                    title="Excluir Piloto"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -1633,6 +1787,96 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
           <span class="text-[9px] font-bold">Ajustes</span>
         </button>
       </div>
+
+      {/* Modal de Reset de Senha do Piloto */}
+      {selectedPilotForPassword && (
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div class="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-700/60 w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-4 text-slate-800 dark:text-slate-100">
+            <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700/60 pb-3">
+              <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                <Key size={18} class="text-primary-500" />
+                <span>Alterar Senha do Piloto</span>
+              </h3>
+              <button 
+                onClick={() => { setSelectedPilotForPassword(null); setNewPilotPassword(''); setPilotPasswordModalError(''); setPilotPasswordModalSuccess(''); }}
+                class="text-slate-400 hover:text-slate-650 dark:hover:text-white text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <p class="text-xs text-slate-550 dark:text-slate-400">
+              Defina uma nova senha de acesso para o piloto <strong class="text-slate-900 dark:text-white">{selectedPilotForPassword.name}</strong> ({selectedPilotForPassword.username}).
+            </p>
+            
+            {pilotPasswordModalSuccess && <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-200 px-3 py-2 rounded-xl text-xs">{pilotPasswordModalSuccess}</div>}
+            {pilotPasswordModalError && <div class="bg-red-500/10 border border-red-500/20 text-red-650 dark:text-red-200 px-3 py-2 rounded-xl text-xs">{pilotPasswordModalError}</div>}
+
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setPilotPasswordModalSuccess('');
+              setPilotPasswordModalError('');
+              
+              if (!newPilotPassword || newPilotPassword.trim() === '') {
+                setPilotPasswordModalError('A senha não pode estar em branco.');
+                return;
+              }
+
+              try {
+                const response = await fetch(`/api/admin/pilots/${selectedPilotForPassword.id}/password`, {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('gama_token')}`
+                  },
+                  body: JSON.stringify({ password: newPilotPassword })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                  throw new Error(data.error || 'Erro ao redefinir senha.');
+                }
+
+                setPilotPasswordModalSuccess('Senha redefinida com sucesso!');
+                setNewPilotPassword('');
+                setTimeout(() => {
+                  setSelectedPilotForPassword(null);
+                  setPilotPasswordModalSuccess('');
+                }, 1500);
+              } catch (err) {
+                setPilotPasswordModalError(err.message);
+              }
+            }} class="space-y-4">
+              <div>
+                <label class="block text-slate-500 dark:text-slate-350 text-xs font-bold mb-1.5">Nova Senha</label>
+                <input
+                  type="password"
+                  required
+                  value={newPilotPassword}
+                  onChange={(e) => setNewPilotPassword(e.target.value)}
+                  placeholder="Mínimo 6 dígitos"
+                  class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-primary-500 focus:outline-none transition-all font-medium text-sm"
+                />
+              </div>
+              
+              <div class="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setSelectedPilotForPassword(null); setNewPilotPassword(''); setPilotPasswordModalError(''); setPilotPasswordModalSuccess(''); }}
+                  class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-650 rounded-xl text-xs font-bold transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-xs font-bold transition-all"
+                >
+                  Salvar Senha
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -197,3 +197,139 @@ exports.deletePilot = (req, res) => {
     }
   );
 };
+
+// Alterar senha de piloto pelo administrador da empresa
+exports.updatePilotPassword = (req, res) => {
+  const companyId = req.user.company_id;
+  const { id } = req.params;
+  const { password } = req.body;
+
+  const pilotId = parseInt(id, 10);
+  if (isNaN(pilotId)) {
+    return res.status(400).json({ error: 'ID de piloto inválido.' });
+  }
+
+  if (!password || password.trim() === '') {
+    return res.status(400).json({ error: 'A nova senha é obrigatória.' });
+  }
+
+  // Verificar se o piloto pertence à mesma empresa do administrador
+  db.get(
+    "SELECT id FROM users WHERE id = ? AND company_id = ? AND role = 'pilot'",
+    [pilotId, companyId],
+    (err, row) => {
+      if (err) {
+        console.error('Erro ao verificar piloto:', err);
+        return res.status(500).json({ error: 'Erro ao verificar piloto.' });
+      }
+
+      if (!row) {
+        return res.status(404).json({ error: 'Piloto não encontrado ou não pertence a esta empresa.' });
+      }
+
+      // Hash da nova senha
+      const salt = bcrypt.genSaltSync(10);
+      const hashedPassword = bcrypt.hashSync(password, salt);
+
+      // Atualizar a senha
+      db.run(
+        "UPDATE users SET password = ? WHERE id = ? AND company_id = ? AND role = 'pilot'",
+        [hashedPassword, pilotId, companyId],
+        function(err) {
+          if (err) {
+            console.error('Erro ao redefinir senha do piloto:', err);
+            return res.status(500).json({ error: 'Erro ao redefinir senha do piloto.' });
+          }
+          return res.json({ message: 'Senha do piloto redefinida com sucesso!' });
+        }
+      );
+    }
+  );
+};
+
+// Atualizar perfil do próprio administrador (e opcionalmente alterar senha)
+exports.updateAdminProfile = (req, res) => {
+  const { id } = req.user; // Obtido do token de autenticação
+  const { name, username, currentPassword, newPassword } = req.body;
+
+  if (!name || !name.trim() || !username || !username.trim()) {
+    return res.status(400).json({ error: 'Nome e usuário são obrigatórios.' });
+  }
+
+  // Primeiro, buscar os dados atuais do usuário para verificar senha e unicidade
+  db.get(
+    "SELECT id, password FROM users WHERE id = ?",
+    [id],
+    (err, user) => {
+      if (err || !user) {
+        return res.status(500).json({ error: 'Erro ao buscar dados do administrador.' });
+      }
+
+      // Verificar se o nome de usuário (username) já está em uso por outra pessoa
+      db.get(
+        "SELECT id FROM users WHERE username = ? AND id != ?",
+        [username.trim(), id],
+        (err, existingUser) => {
+          if (err) {
+            return res.status(500).json({ error: 'Erro ao verificar nome de usuário.' });
+          }
+
+          if (existingUser) {
+            return res.status(400).json({ error: 'O nome de usuário já está em uso.' });
+          }
+
+          const hasNewPassword = newPassword && newPassword.trim() !== '';
+
+          if (hasNewPassword) {
+            if (!currentPassword || currentPassword.trim() === '') {
+              return res.status(400).json({ error: 'A senha atual é necessária para definir uma nova senha.' });
+            }
+
+            // Comparar a senha atual com a senha criptografada no banco
+            const isPasswordCorrect = bcrypt.compareSync(currentPassword, user.password);
+            if (!isPasswordCorrect) {
+              return res.status(400).json({ error: 'A senha atual informada está incorreta.' });
+            }
+
+            // Gerar hash da nova senha
+            const salt = bcrypt.genSaltSync(10);
+            const hashedNewPassword = bcrypt.hashSync(newPassword, salt);
+
+            // Atualizar nome, username e senha
+            db.run(
+              "UPDATE users SET name = ?, username = ?, password = ? WHERE id = ? AND role = 'admin'",
+              [name.trim(), username.trim(), hashedNewPassword, id],
+              function(err) {
+                if (err) {
+                  console.error('Erro ao atualizar dados do administrador:', err);
+                  return res.status(500).json({ error: 'Erro ao atualizar dados do administrador.' });
+                }
+                return res.json({ 
+                  message: 'Perfil e senha atualizados com sucesso!',
+                  user: { name: name.trim(), username: username.trim() }
+                });
+              }
+            );
+          } else {
+            // Apenas atualizar nome e username
+            db.run(
+              "UPDATE users SET name = ?, username = ? WHERE id = ? AND role = 'admin'",
+              [name.trim(), username.trim(), id],
+              function(err) {
+                if (err) {
+                  console.error('Erro ao atualizar dados do administrador:', err);
+                  return res.status(500).json({ error: 'Erro ao atualizar dados do administrador.' });
+                }
+                return res.json({ 
+                  message: 'Perfil atualizado com sucesso!',
+                  user: { name: name.trim(), username: username.trim() }
+                });
+              }
+            );
+          }
+        }
+      );
+    }
+  );
+};
+

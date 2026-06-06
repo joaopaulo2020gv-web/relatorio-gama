@@ -145,6 +145,17 @@ app.delete('/api/admin/pilots/:id',
   auth.requireCompanyAdmin, 
   clientAdminController.deletePilot
 );
+app.put('/api/admin/pilots/:id/password', 
+  auth.authenticateToken, 
+  auth.requireCompanyAdmin, 
+  clientAdminController.updatePilotPassword
+);
+app.put('/api/admin/profile', 
+  auth.authenticateToken, 
+  auth.requireCompanyAdmin, 
+  clientAdminController.updateAdminProfile
+);
+
 
 // ==========================================
 // ROTAS DE RELATÓRIOS

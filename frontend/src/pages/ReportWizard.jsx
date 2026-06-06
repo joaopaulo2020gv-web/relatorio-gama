@@ -803,7 +803,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
       </div>
 
       {/* Main Wizard Form */}
-      <main class="max-w-4xl mx-auto p-6 mt-6 bg-slate-800 border border-slate-700/40 rounded-3xl shadow-xl">
+      <main class="max-w-4xl mx-auto p-6 mt-6 bg-slate-800 border border-slate-700/40 rounded-3xl shadow-xl animate-slide-up">
         {error && (
           <div class="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-200 px-4 py-3 rounded-xl text-sm mb-6">
             {error}

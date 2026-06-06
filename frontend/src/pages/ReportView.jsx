@@ -80,7 +80,7 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
   };
 
   return (
-    <div class="report-view-container min-h-screen bg-slate-50 dark:bg-slate-900 md:p-6 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200">
+    <div class="report-view-container min-h-screen bg-slate-50 dark:bg-slate-900 md:p-6 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200 animate-slide-up">
       
       {/* Botões do Topo (Escondidos na Impressão) */}
       <div class="max-w-4xl mx-auto mb-6 px-4 flex items-center justify-between no-print">

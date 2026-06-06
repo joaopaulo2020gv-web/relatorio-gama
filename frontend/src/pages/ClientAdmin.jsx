@@ -38,6 +38,52 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
     .replace(/[\u0300-\u036f]/g, '') // remove acentos
     .replace(/[^a-z0-9]/g, '');      // remove espaços e caracteres especiais
 
+  // Estados para o Pull-to-Refresh
+  const [pulling, setPulling] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const startY = React.useRef(0);
+
+  const handleTouchStart = (e) => {
+    if (window.scrollY === 0 && !refreshing) {
+      startY.current = e.touches[0].pageY;
+      setPulling(true);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (!pulling || refreshing) return;
+    const currentY = e.touches[0].pageY;
+    const distance = currentY - startY.current;
+    if (distance > 0) {
+      // Resistência elástica
+      const elasticDistance = Math.min(80, distance * 0.4);
+      setPullDistance(elasticDistance);
+      // Evitar scroll nativo do Chrome
+      if (distance > 10 && e.cancelable) {
+        e.preventDefault();
+      }
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (!pulling) return;
+    setPulling(false);
+    if (pullDistance > 50) {
+      setRefreshing(true);
+      setPullDistance(50);
+      triggerHaptic(10);
+      
+      // Executa o refresh do admin
+      await fetchCompanyData();
+      
+      setRefreshing(false);
+      setPullDistance(0);
+    } else {
+      setPullDistance(0);
+    }
+  };
+
   const headers = { 'Authorization': `Bearer ${localStorage.getItem('gama_token')}` };
 
   const fetchOfflineDrafts = async () => {
@@ -373,7 +419,34 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
   const recentReports = [...reports].slice(0, 3);
 
   return (
-    <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans flex flex-col md:flex-row relative transition-colors duration-200">
+    <div 
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans flex flex-col md:flex-row relative transition-colors duration-200 overflow-hidden"
+    >
+      {/* Pull to Refresh Spinner Indicator */}
+      <div 
+        class="fixed left-1/2 -translate-x-1/2 z-40 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 w-10 h-10 rounded-full shadow-lg pointer-events-none transition-all"
+        style={{ 
+          top: `${pullDistance + 10}px`,
+          opacity: pullDistance > 10 ? 1 : 0,
+          transition: pulling ? 'none' : 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}
+      >
+        <svg 
+          class={`w-5 h-5 text-primary-500 ${refreshing ? 'animate-spin' : ''}`}
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+          style={{ 
+            transform: refreshing ? 'none' : `rotate(${pullDistance * 6}deg)`,
+            transition: refreshing ? 'none' : 'transform 0.1s linear'
+          }}
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3-3 3 3" />
+        </svg>
+      </div>
       
       {/* Header Mobile */}
       <header class="md:hidden bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/60 px-5 py-4 flex items-center justify-between sticky top-0 z-40 w-full transition-colors duration-200">

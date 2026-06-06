@@ -18,6 +18,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, settings, pilots, reports
   const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [hasInitialCnpj, setHasInitialCnpj] = useState(false);
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCulture, setActiveCulture] = useState('Todos');
@@ -197,6 +198,11 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
       const compData = await compRes.json();
       if (compRes.ok && compData.company) {
         setCompany(compData.company);
+        if (compData.company.cnpj && compData.company.cnpj.trim() !== '') {
+          setHasInitialCnpj(true);
+        } else {
+          setHasInitialCnpj(false);
+        }
         if (compData.company.logo_url) {
           setLogoPreview(compData.company.logo_url);
         }
@@ -1106,10 +1112,18 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                           <input
                             type="text"
                             value={company.cnpj || ''}
+                            disabled={hasInitialCnpj}
                             onChange={(e) => setCompany({ ...company, cnpj: e.target.value })}
                             placeholder="Ex: 00.000.000/0001-00"
-                            class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                            class={`w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm ${
+                              hasInitialCnpj ? 'opacity-50 cursor-not-allowed bg-slate-955 bg-slate-950/35' : ''
+                            }`}
                           />
+                          {hasInitialCnpj && (
+                            <span class="text-[10px] text-amber-500 font-semibold mt-1 block">
+                              🔒 Bloqueado para edição. Solicite suporte para alterar o CNPJ.
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -38,44 +38,57 @@ exports.updateCompanyDetails = async (req, res) => {
     return res.status(400).json({ error: 'O nome da empresa é obrigatório.' });
   }
 
-  try {
-    // Verificar se há um arquivo de imagem de logo novo
-    let logo_url = req.body.logo_url; // Se for string mantida
-    if (req.file) {
-      logo_url = `/api/uploads/${req.file.filename}`;
+  db.get("SELECT cnpj FROM companies WHERE id = ?", [companyId], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: 'Erro ao verificar o CNPJ atual da empresa.' });
     }
 
-    db.run(
-      `UPDATE companies 
-       SET name = ?, cnpj = ?, logo_url = COALESCE(?, logo_url), 
-           bank_name = ?, bank_agency = ?, bank_account = ?, bank_owner = ?, bank_cpf_pix = ?
-       WHERE id = ?`,
-      [
-        name, 
-        cnpj || '', 
-        logo_url,
-        bank_name || '', 
-        bank_agency || '', 
-        bank_account || '', 
-        bank_owner || '', 
-        bank_cpf_pix || '', 
-        companyId
-      ],
-      function(err) {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: 'Erro ao atualizar dados da empresa.' });
-        }
-        return res.json({ 
-          message: 'Dados da empresa atualizados com sucesso!',
-          logo_url: logo_url
-        });
+    const currentCnpj = (row && row.cnpj) ? row.cnpj.trim() : '';
+    const newCnpj = cnpj ? cnpj.trim() : '';
+
+    if (currentCnpj !== '' && currentCnpj !== newCnpj) {
+      return res.status(400).json({ error: 'O CNPJ da empresa já foi cadastrado e não pode mais ser alterado. Solicite ao suporte técnico caso precise de ajuda.' });
+    }
+
+    try {
+      // Verificar se há um arquivo de imagem de logo novo
+      let logo_url = req.body.logo_url; // Se for string mantida
+      if (req.file) {
+        logo_url = `/api/uploads/${req.file.filename}`;
       }
-    );
-  } catch (err) {
-    console.error('Erro ao fazer upload da logo:', err);
-    return res.status(500).json({ error: 'Erro ao fazer upload do logotipo.' });
-  }
+
+      db.run(
+        `UPDATE companies 
+         SET name = ?, cnpj = ?, logo_url = COALESCE(?, logo_url), 
+             bank_name = ?, bank_agency = ?, bank_account = ?, bank_owner = ?, bank_cpf_pix = ?
+         WHERE id = ?`,
+        [
+          name, 
+          cnpj || '', 
+          logo_url,
+          bank_name || '', 
+          bank_agency || '', 
+          bank_account || '', 
+          bank_owner || '', 
+          bank_cpf_pix || '', 
+          companyId
+        ],
+        function(err) {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Erro ao atualizar dados da empresa.' });
+          }
+          return res.json({ 
+            message: 'Dados da empresa atualizados com sucesso!',
+            logo_url: logo_url
+          });
+        }
+      );
+    } catch (err) {
+      console.error('Erro ao fazer upload da logo:', err);
+      return res.status(500).json({ error: 'Erro ao fazer upload do logotipo.' });
+    }
+  });
 };
 
 // Listar funcionários (pilotos) da empresa

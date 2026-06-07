@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Save, Plus, Trash2, Camera, MapPin, Thermometer, Droplet, DollarSign, Calendar, Sun, Moon } from 'lucide-react';
 import { saveDraft, deleteDraft } from '../utils/offlineDb';
 import { triggerHaptic } from '../utils/haptic';
@@ -238,22 +239,58 @@ const SignaturePad = ({ label, value, onChange }) => {
         />
       </div>
 
-      {showFullModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/98 flex flex-col p-4 select-none touch-none no-print">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+      {showFullModal && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] select-none touch-none no-print"
+          style={{
+            backgroundColor: '#0f172a',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '16px',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Header - nunca encolhe */}
+          <div
+            style={{ flexShrink: 0, paddingBottom: '12px', borderBottom: '1px solid #1e293b' }}
+            className="flex items-center justify-between"
+          >
             <div>
-              <h3 className="text-sm font-bold text-white uppercase">{label}</h3>
-              <p className="text-[10px] text-slate-500 font-semibold mt-0.5 font-sans">Assine usando o seu dedo na tela.</p>
+              <h3 style={{ color: '#ffffff', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase' }}>{label}</h3>
+              <p style={{ color: '#64748b', fontSize: '10px', fontWeight: 600, marginTop: '2px' }}>Assine usando o seu dedo na tela.</p>
             </div>
             <div className="text-right hidden sm:block">
-              <span className="text-[9px] text-amber-500 font-black uppercase tracking-wider animate-pulse">💡 Dica: Gire o celular de lado (horizontal)</span>
+              <span style={{ color: '#f59e0b', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>💡 Dica: Gire o celular de lado</span>
             </div>
           </div>
 
-          <div className="flex-1 my-4 bg-white rounded-2xl overflow-hidden relative border border-slate-800 flex">
+          {/* Canvas - ocupa o espaço restante sem ultrapassar */}
+          <div
+            style={{
+              flex: '1 1 0%',
+              minHeight: 0,
+              marginTop: '16px',
+              marginBottom: '16px',
+              backgroundColor: '#ffffff',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              position: 'relative',
+              border: '1px solid #1e293b',
+            }}
+          >
             <canvas
               ref={fullCanvasRef}
-              className="w-full h-full cursor-crosshair block touch-none bg-white"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                display: 'block',
+                touchAction: 'none',
+                cursor: 'crosshair',
+                backgroundColor: '#ffffff',
+              }}
               onMouseDown={(e) => startDrawing(e, fullCanvasRef.current)}
               onMouseMove={(e) => draw(e, fullCanvasRef.current)}
               onMouseUp={() => stopDrawing(fullCanvasRef.current)}
@@ -262,37 +299,79 @@ const SignaturePad = ({ label, value, onChange }) => {
               onTouchMove={(e) => draw(e, fullCanvasRef.current)}
               onTouchEnd={() => stopDrawing(fullCanvasRef.current)}
             />
-            <div className="absolute top-2 right-2 px-2.5 py-1 bg-black/60 rounded-lg text-[9px] text-slate-350 font-bold block sm:hidden pointer-events-none">
+            <div className="absolute top-2 right-2 px-2.5 py-1 bg-black/60 rounded-lg text-[9px] font-bold block sm:hidden pointer-events-none" style={{ color: '#94a3b8' }}>
               Gire de lado 📱 ➔ ⎓
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-2">
+          {/* Footer de botões - nunca encolhe */}
+          <div
+            style={{
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+              paddingTop: '8px',
+            }}
+          >
             <button
               type="button"
               onClick={() => setShowFullModal(false)}
-              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-all active:scale-95"
+              style={{
+                padding: '10px 14px',
+                backgroundColor: '#1e293b',
+                color: '#cbd5e1',
+                fontWeight: 700,
+                borderRadius: '12px',
+                fontSize: '11px',
+                border: 'none',
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+              }}
             >
               Cancelar
             </button>
-            <div className="flex items-center space-x-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
                 type="button"
                 onClick={() => clearCanvas(fullCanvasRef.current)}
-                className="px-5 py-2.5 bg-red-950/30 hover:bg-red-950/50 text-red-400 font-bold rounded-xl text-xs border border-red-500/20 transition-all active:scale-95"
+                style={{
+                  padding: '10px 14px',
+                  backgroundColor: 'rgba(69, 10, 10, 0.3)',
+                  color: '#f87171',
+                  fontWeight: 700,
+                  borderRadius: '12px',
+                  fontSize: '11px',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                }}
               >
-                Limpar Tela
+                Limpar
               </button>
               <button
                 type="button"
                 onClick={handleConfirmSignature}
-                className="px-6 py-2.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white font-extrabold rounded-xl text-xs transition-all active:scale-95 shadow-lg shadow-primary-500/10"
+                style={{
+                  padding: '10px 16px',
+                  background: 'linear-gradient(to right, #48722c, #10b981)',
+                  color: '#ffffff',
+                  fontWeight: 800,
+                  borderRadius: '12px',
+                  fontSize: '11px',
+                  border: 'none',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  boxShadow: '0 10px 15px -3px rgba(72, 114, 44, 0.1)',
+                }}
               >
-                Confirmar Assinatura
+                Confirmar
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -325,6 +325,42 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
   const totalReportsCount = reports.length;
   const totalEarnings = reports.reduce((sum, r) => sum + (parseFloat(r.total_price) || 0), 0);
 
+  // Ganhos e comissão do piloto para o mês corrente
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-11
+  
+  const currentMonthName = now.toLocaleString('pt-BR', { month: 'long' });
+
+  // Filtrar relatórios do mês corrente do piloto
+  const currentMonthReports = reports.filter(r => {
+    if (!r.report_date) return false;
+    const rDate = new Date(r.report_date);
+    return rDate.getFullYear() === currentYear && rDate.getMonth() === currentMonth;
+  });
+
+  const monthlyHectares = currentMonthReports.reduce((sum, r) => sum + (parseFloat(r.total_area) || 0), 0);
+  const monthlyEarnings = currentMonthReports.reduce((sum, r) => sum + (parseFloat(r.total_price) || 0), 0);
+
+  const commissionType = user.commission_type || 'commission_per_ha';
+  const salaryBase = parseFloat(user.salary_base) || 0;
+  const commissionPerHa = parseFloat(user.commission_per_ha) || 0;
+  const commissionPercentage = parseFloat(user.commission_percentage) || 0;
+
+  let calculatedCommission = 0;
+  let commissionRuleText = '';
+
+  if (commissionType === 'salary_plus_commission_per_ha') {
+    calculatedCommission = salaryBase + (monthlyHectares * commissionPerHa);
+    commissionRuleText = `Fixo: R$ ${salaryBase.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + R$ ${commissionPerHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/ha`;
+  } else if (commissionType === 'commission_per_ha') {
+    calculatedCommission = monthlyHectares * commissionPerHa;
+    commissionRuleText = `Comissão: R$ ${commissionPerHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/ha`;
+  } else if (commissionType === 'percentage_revenue') {
+    calculatedCommission = monthlyEarnings * (commissionPercentage / 100);
+    commissionRuleText = `Comissão: ${commissionPercentage}% do faturamento`;
+  }
+
   // Agrupamento de Culturas para o Gráfico Donut
   const cultureDataMap = {};
   reports.forEach(r => {
@@ -505,14 +541,31 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
         {reports.length > 0 && (
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
             {/* Mini-Cards de KPI */}
-            <div class="lg:col-span-1 flex flex-col gap-4 justify-between">
+            <div class="lg:col-span-1 flex flex-col gap-4">
+              {/* Card Remuneração Pessoal do Piloto */}
+              <div style={{
+                background: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)',
+                boxShadow: '0 10px 15px -3px rgba(13, 148, 136, 0.2)'
+              }} class="p-5 rounded-2xl flex items-center space-x-4 text-white shadow-md transition-all">
+                <div class="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center">
+                  <DollarSign size={20} />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <span class="text-[10px] text-emerald-100 font-bold uppercase tracking-wider block">Minha Remuneração ({currentMonthName})</span>
+                  <div class="text-xl font-black text-white mt-0.5 truncate">
+                    {calculatedCommission.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </div>
+                  <p class="text-[9px] text-emerald-200 font-bold mt-0.5 uppercase tracking-wider truncate">{commissionRuleText}</p>
+                </div>
+              </div>
+
               {/* Card Hectares */}
               <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-5 rounded-2xl flex items-center space-x-4 shadow-xs dark:shadow-none transition-colors duration-200">
                 <div class="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center">
                   <TrendingUp size={20} />
                 </div>
                 <div>
-                  <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Área Pulverizada</span>
+                  <span class="text-[10px] text-slate-505 dark:text-slate-400 font-bold uppercase tracking-wider">Área Pulverizada</span>
                   <div class="text-xl font-black text-slate-900 dark:text-white mt-0.5">
                     {totalHectares.toFixed(1).replace('.', ',')} ha
                   </div>
@@ -525,7 +578,7 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
                   <FileText size={20} />
                 </div>
                 <div>
-                  <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Relatórios Emitidos</span>
+                  <span class="text-[10px] text-slate-505 dark:text-slate-400 font-bold uppercase tracking-wider">Relatórios Emitidos</span>
                   <div class="text-xl font-black text-slate-900 dark:text-white mt-0.5">
                     {totalReportsCount} un
                   </div>
@@ -538,7 +591,7 @@ export default function PilotDashboard({ onLogout, onCreateReport, onViewReport,
                   <DollarSign size={20} />
                 </div>
                 <div>
-                  <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Faturamento Gerado</span>
+                  <span class="text-[10px] text-slate-505 dark:text-slate-400 font-bold uppercase tracking-wider">Faturamento Gerado</span>
                   <div class="text-xl font-black text-slate-900 dark:text-white mt-0.5">
                     {totalEarnings.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </div>

@@ -5,6 +5,35 @@ import { triggerHaptic } from '../utils/haptic';
 
 export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, theme, toggleTheme, showInstallOption, onTriggerInstall }) {
   const user = JSON.parse(localStorage.getItem('gama_user') || '{}');
+
+  // Nome e Iniciais para Saudação Premium
+  const firstName = user.name ? user.name.split(' ')[0] : 'Administrador';
+  const initials = user.name 
+    ? user.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() 
+    : 'AD';
+
+  // Obter saudação baseada no horário do dia e data formatada por extenso
+  const getGreetingAndDate = () => {
+    const now = new Date();
+    const hours = now.getHours();
+    let greeting = 'Bom dia';
+    if (hours >= 12 && hours < 18) {
+      greeting = 'Boa tarde';
+    } else if (hours >= 18 || hours < 5) {
+      greeting = 'Boa noite';
+    }
+    
+    const weekday = now.toLocaleDateString('pt-BR', { weekday: 'long' });
+    const day = now.getDate();
+    const month = now.toLocaleDateString('pt-BR', { month: 'long' });
+    
+    return {
+      greeting,
+      formattedDate: `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${day} de ${month}`
+    };
+  };
+
+  const { greeting, formattedDate } = getGreetingAndDate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [company, setCompany] = useState({
     name: '', cnpj: '', logo_url: '',
@@ -38,6 +67,11 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
   // Filtro por Cliente no Dashboard
   const [selectedClientFilter, setSelectedClientFilter] = useState('Todos');
 
+  // Filtro por Data no Dashboard
+  const [selectedDateFilter, setSelectedDateFilter] = useState('tudo'); // tudo, mes_atual, mes_passado, personalizado
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+
   // Clientes únicos extraídos dinamicamente
   const uniqueClients = React.useMemo(() => {
     const clients = reports.map(r => r.client_name ? r.client_name.trim() : '').filter(Boolean);
@@ -46,9 +80,56 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
 
   // Relatórios filtrados para o Dashboard
   const dashboardReports = React.useMemo(() => {
-    if (selectedClientFilter === 'Todos') return reports;
-    return reports.filter(r => r.client_name && r.client_name.trim() === selectedClientFilter);
-  }, [reports, selectedClientFilter]);
+    let filtered = reports;
+
+    // 1. Filtrar por cliente
+    if (selectedClientFilter !== 'Todos') {
+      filtered = filtered.filter(r => r.client_name && r.client_name.trim() === selectedClientFilter);
+    }
+
+    // 2. Filtrar por data
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    const getYearAndMonthLocal = (dateStr) => {
+      const parts = dateStr.split('T')[0].split('-');
+      return {
+        year: parseInt(parts[0], 10),
+        month: parseInt(parts[1], 10) - 1
+      };
+    };
+
+    if (selectedDateFilter === 'mes_atual') {
+      filtered = filtered.filter(r => {
+        if (!r.report_date) return false;
+        const { year, month } = getYearAndMonthLocal(r.report_date);
+        return year === currentYear && month === currentMonth;
+      });
+    } else if (selectedDateFilter === 'mes_passado') {
+      let targetMonth = currentMonth - 1;
+      let targetYear = currentYear;
+      if (targetMonth < 0) {
+        targetMonth = 11;
+        targetYear -= 1;
+      }
+      filtered = filtered.filter(r => {
+        if (!r.report_date) return false;
+        const { year, month } = getYearAndMonthLocal(r.report_date);
+        return year === targetYear && month === targetMonth;
+      });
+    } else if (selectedDateFilter === 'personalizado') {
+      filtered = filtered.filter(r => {
+        if (!r.report_date) return false;
+        const rDateStr = r.report_date.split('T')[0];
+        if (startDateFilter && rDateStr < startDateFilter) return false;
+        if (endDateFilter && rDateStr > endDateFilter) return false;
+        return true;
+      });
+    }
+
+    return filtered;
+  }, [reports, selectedClientFilter, selectedDateFilter, startDateFilter, endDateFilter]);
 
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -100,6 +181,19 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
   const [pilotPassword, setPilotPassword] = useState('');
   const [pilotSuccess, setPilotSuccess] = useState('');
   const [pilotError, setPilotError] = useState('');
+
+  const [pilotCommissionType, setPilotCommissionType] = useState('commission_per_ha');
+  const [pilotSalaryBase, setPilotSalaryBase] = useState('0');
+  const [pilotCommissionPerHa, setPilotCommissionPerHa] = useState('0');
+  const [pilotCommissionPercentage, setPilotCommissionPercentage] = useState('0');
+
+  const [selectedPilotForRemuneration, setSelectedPilotForRemuneration] = useState(null);
+  const [editCommissionType, setEditCommissionType] = useState('commission_per_ha');
+  const [editSalaryBase, setEditSalaryBase] = useState('0');
+  const [editCommissionPerHa, setEditCommissionPerHa] = useState('0');
+  const [editCommissionPercentage, setEditCommissionPercentage] = useState('0');
+  const [editRemunerationSuccess, setEditRemunerationSuccess] = useState('');
+  const [editRemunerationError, setEditRemunerationError] = useState('');
 
   const companySlug = (company.name || '')
     .toLowerCase()
@@ -471,7 +565,11 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
         body: JSON.stringify({
           name: pilotName,
           username: `${pilotUsername}@${companySlug}`,
-          password: pilotPassword
+          password: pilotPassword,
+          commission_type: pilotCommissionType,
+          salary_base: parseFloat(pilotSalaryBase) || 0,
+          commission_per_ha: parseFloat(pilotCommissionPerHa) || 0,
+          commission_percentage: parseFloat(pilotCommissionPercentage) || 0
         })
       });
 
@@ -484,14 +582,66 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
       setPilotName('');
       setPilotUsername('');
       setPilotPassword('');
+      setPilotCommissionType('commission_per_ha');
+      setPilotSalaryBase('0');
+      setPilotCommissionPerHa('0');
+      setPilotCommissionPercentage('0');
       fetchCompanyData();
     } catch (err) {
       setPilotError(err.message);
     }
   };
 
+  const handleUpdatePilotRemuneration = async (e) => {
+    e.preventDefault();
+    setEditRemunerationSuccess('');
+    setEditRemunerationError('');
+
+    if (!selectedPilotForRemuneration) return;
+
+    try {
+      const response = await fetch(`/api/admin/pilots/${selectedPilotForRemuneration.id}/remuneration`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('gama_token')}`
+        },
+        body: JSON.stringify({
+          commission_type: editCommissionType,
+          salary_base: parseFloat(editSalaryBase) || 0,
+          commission_per_ha: parseFloat(editCommissionPerHa) || 0,
+          commission_percentage: parseFloat(editCommissionPercentage) || 0
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao atualizar remuneração do piloto.');
+      }
+
+      setEditRemunerationSuccess('Remuneração atualizada com sucesso!');
+      setTimeout(() => {
+        setSelectedPilotForRemuneration(null);
+        setEditRemunerationSuccess('');
+      }, 1500);
+      fetchCompanyData();
+    } catch (err) {
+      setEditRemunerationError(err.message);
+    }
+  };
+
+  const handleOpenRemunerationModal = (pilot) => {
+    setSelectedPilotForRemuneration(pilot);
+    setEditCommissionType(pilot.commission_type || 'commission_per_ha');
+    setEditSalaryBase(String(pilot.salary_base || 0));
+    setEditCommissionPerHa(String(pilot.commission_per_ha || 0));
+    setEditCommissionPercentage(String(pilot.commission_percentage || 0));
+    setEditRemunerationSuccess('');
+    setEditRemunerationError('');
+  };
+
   const handleDeletePilot = async (pilotId) => {
-    if (!window.confirm('Deseja realmente excluir este piloto? Ele perderá o acesso imediatamente.')) {
+    if (!window.confirm('Deseja realmente excluir este piloto? Ele perderá o acesso imediatamente e todos os seus relatórios serão transferidos para o seu controle.')) {
       return;
     }
 
@@ -585,7 +735,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
 
 
   // --- Estatísticas do Dashboard ---
-  const totalLaudos = dashboardReports.length;
+  const totalReports = dashboardReports.length;
   const totalArea = dashboardReports.reduce((sum, r) => sum + (parseFloat(r.total_area) || 0), 0);
   const faturamentoTotal = dashboardReports.reduce((sum, r) => sum + (parseFloat(r.total_price) || 0), 0);
   const ticketMedioHa = totalArea > 0 ? (faturamentoTotal / totalArea) : 0;
@@ -871,98 +1021,244 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
             {/* ABA: DASHBOARD */}
             {activeTab === 'dashboard' && (
               <div class="space-y-6">
-                {/* Cabeçalho */}
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-700/60 pb-4 space-y-3 sm:space-y-0">
-                  <div>
-                    <h3 class="text-xl font-bold">Dashboard de Indicadores</h3>
-                    <p class="text-xs text-slate-400 font-semibold">Visão geral do desempenho e atividades de pulverização da empresa.</p>
+                {/* Banner de Saudação Premium */}
+                <div 
+                  style={{
+                    background: 'linear-gradient(135deg, #064e3b 0%, #059669 100%)',
+                    borderRadius: '24px',
+                    padding: '20px',
+                    color: '#ffffff',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '16px',
+                    width: '100%'
+                  }}
+                >
+                  {/* Orbes vibrantes de gradiente em segundo plano (efeito de luz de fundo neon) */}
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      right: '-48px',
+                      top: '-48px',
+                      width: '160px',
+                      height: '160px',
+                      background: 'rgba(255, 255, 255, 0.15)',
+                      borderRadius: '9999px',
+                      filter: 'blur(35px)',
+                      pointerEvents: 'none'
+                    }}
+                    className="animate-pulse"
+                  />
+                  
+                  <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ position: 'relative', display: 'flex', height: '8px', width: '8px' }}>
+                        <span style={{ position: 'absolute', display: 'inline-flex', height: '100%', width: '100%', borderRadius: '9999px', background: '#34d399', opacity: 0.75 }} className="animate-ping"></span>
+                        <span style={{ position: 'relative', display: 'inline-flex', borderRadius: '9999px', height: '8px', width: '8px', background: '#10b981' }}></span>
+                      </span>
+                      <span style={{ fontSize: '9px', color: 'rgba(255, 255, 255, 0.8)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', lineHeight: '1' }}>
+                        Painel Administrativo • AgroSkan
+                      </span>
+                    </div>
+                    <h3 style={{ fontSize: '22px', fontWeight: '900', letterSpacing: '-0.02em', lineHeight: '1.2', color: '#ffffff', marginTop: '6px' }}>
+                      {greeting}, <span style={{ color: '#a7f3d0' }}>{firstName}!</span>
+                    </h3>
+                    <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.8)', fontWeight: '600', marginTop: '4px', textTransform: 'capitalize' }}>
+                      {formattedDate}
+                    </p>
                   </div>
-                  <div>
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-primary-600/20 text-primary-400 border border-primary-500/25">
-                      Atualizado em Tempo Real
-                    </span>
+
+                  {/* Avatar do Usuário */}
+                  <div 
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '16px',
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      padding: '1.5px',
+                      flexShrink: 0,
+                      backdropFilter: 'blur(4px)',
+                      WebkitBackdropFilter: 'blur(4px)',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  >
+                    <div 
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '14px',
+                        background: '#047857',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: '900',
+                        fontSize: '14px',
+                        color: '#ffffff',
+                        userSelect: 'none'
+                      }}
+                    >
+                      {initials}
+                    </div>
                   </div>
                 </div>
 
-                {/* Filtro por Cliente */}
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-4 rounded-2xl gap-3 shadow-md">
-                  <div class="flex items-center space-x-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-primary-600/10 text-primary-600 dark:text-primary-400 flex items-center justify-center border border-primary-500/20">
-                      <Search size={16} />
-                    </div>
-                    <div>
-                      <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider block">Filtro de Análise</span>
-                      <span class="text-xs font-semibold text-slate-800 dark:text-slate-200">Selecione um cliente para detalhar os indicadores</span>
-                    </div>
+                {/* Filtro por Cliente - Seletor Dropdown */}
+                <div class="space-y-2">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-extrabold uppercase tracking-wider">
+                      Filtrar por Cliente
+                    </span>
                   </div>
-                  <div class="w-full sm:w-64">
+                  <div class="relative w-full max-w-xs">
                     <select
                       value={selectedClientFilter}
                       onChange={(e) => { triggerHaptic(8); setSelectedClientFilter(e.target.value); }}
-                      class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-primary-500 transition-all cursor-pointer"
+                      class="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-350 focus:border-primary-500 focus:ring-1 focus:ring-primary-500/50 transition-all cursor-pointer appearance-none pr-10"
                     >
                       {uniqueClients.map(client => (
-                        <option key={client} value={client}>{client}</option>
+                        <option key={client} value={client}>
+                          {client === 'Todos' ? 'Todos os Clientes' : client}
+                        </option>
                       ))}
                     </select>
+                    {/* Ícone de seta de dropdown personalizado */}
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-500 dark:text-slate-400">
+                      <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                      </svg>
+                    </div>
                   </div>
                 </div>
 
-                {/* Grid de KPIs */}
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Card 1: Faturamento */}
-                  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
-                    <div class="absolute w-24 h-24 bg-emerald-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-110 transition-transform duration-300"></div>
-                    <div class="space-y-1">
-                      <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Faturamento Total</span>
-                      <div class="text-xl font-black text-emerald-600 dark:text-emerald-400">
-                        {faturamentoTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {/* Filtro por Período - Chips Horizontais */}
+                <div class="space-y-2">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-extrabold uppercase tracking-wider">
+                      Filtrar por Período
+                    </span>
+                  </div>
+                  <div class="flex overflow-x-auto py-1.5 px-0.5 gap-2 no-scrollbar scroll-smooth -mx-6 px-6 sm:mx-0 sm:px-0">
+                    {[
+                      { id: 'tudo', label: 'Qualquer data' },
+                      { id: 'mes_atual', label: 'Mês Atual' },
+                      { id: 'mes_passado', label: 'Mês Passado' },
+                      { id: 'personalizado', label: 'Personalizado' }
+                    ].map(opt => {
+                      const isSelected = selectedDateFilter === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          onClick={() => { triggerHaptic(8); setSelectedDateFilter(opt.id); }}
+                          class={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 border cursor-pointer ${
+                            isSelected
+                              ? 'bg-primary-600 border-primary-600 text-white shadow-md shadow-primary-600/15 scale-[1.03]'
+                              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700/50 text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-700/35'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Inputs para Período Personalizado */}
+                  {selectedDateFilter === 'personalizado' && (
+                    <div class="flex flex-col sm:flex-row items-center gap-3 pt-2 max-w-lg animate-fade-in">
+                      <div class="w-full">
+                        <label class="block text-[9px] text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider mb-1">Data Inicial</label>
+                        <input
+                          type="date"
+                          value={startDateFilter}
+                          onChange={(e) => setStartDateFilter(e.target.value)}
+                          class="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-primary-500"
+                        />
                       </div>
-                      <p class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">Receitas consolidadas</p>
+                      <div class="w-full">
+                        <label class="block text-[9px] text-slate-450 dark:text-slate-500 font-bold uppercase tracking-wider mb-1">Data Final</label>
+                        <input
+                          type="date"
+                          value={endDateFilter}
+                          onChange={(e) => setEndDateFilter(e.target.value)}
+                          class="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-primary-500"
+                        />
+                      </div>
                     </div>
-                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-md">
-                      <DollarSign size={20} />
+                  )}
+                </div>
+
+                {/* Grid de KPIs - Ajustado para grid-cols-2 no mobile para compactar e deixar premium */}
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Card 1: Faturamento */}
+                  <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/30 p-4 rounded-2xl flex flex-col justify-between relative overflow-hidden group shadow-sm hover:shadow-md transition-all duration-200">
+                    <div class="absolute w-16 h-16 bg-emerald-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-125 transition-transform duration-300 pointer-events-none"></div>
+                    <div class="flex items-center justify-between w-full">
+                      <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Faturamento</span>
+                      <div class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 flex items-center justify-center border border-emerald-500/20">
+                        <DollarSign size={14} />
+                      </div>
+                    </div>
+                    <div class="mt-3">
+                      <div class="text-lg font-black text-emerald-600 dark:text-emerald-400 tracking-tight truncate">
+                        {faturamentoTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+                      </div>
+                      <p class="text-[9px] text-slate-450 dark:text-slate-500 font-medium mt-0.5">Receitas totais</p>
                     </div>
                   </div>
 
                   {/* Card 2: Área Aplicada */}
-                  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
-                    <div class="absolute w-24 h-24 bg-primary-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-110 transition-transform duration-300"></div>
-                    <div class="space-y-1">
-                      <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Área Pulverizada</span>
-                      <div class="text-xl font-black text-slate-800 dark:text-white">{totalArea.toFixed(1).replace('.', ',')} ha</div>
-                      <p class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">Total trabalhado</p>
+                  <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/30 p-4 rounded-2xl flex flex-col justify-between relative overflow-hidden group shadow-sm hover:shadow-md transition-all duration-200">
+                    <div class="absolute w-16 h-16 bg-primary-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-125 transition-transform duration-300 pointer-events-none"></div>
+                    <div class="flex items-center justify-between w-full">
+                      <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Área Aplicada</span>
+                      <div class="w-7 h-7 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center border border-primary-500/20">
+                        <TrendingUp size={14} />
+                      </div>
                     </div>
-                    <div class="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center border border-primary-500/20 shadow-md">
-                      <TrendingUp size={20} />
+                    <div class="mt-3">
+                      <div class="text-lg font-black text-slate-800 dark:text-white tracking-tight truncate">
+                        {totalArea.toFixed(1).replace('.', ',')} <span class="text-xs font-bold text-slate-500">ha</span>
+                      </div>
+                      <p class="text-[9px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">Hectares totais</p>
                     </div>
                   </div>
 
-                  {/* Card 3: Total Laudos */}
-                  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
-                    <div class="absolute w-24 h-24 bg-blue-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-110 transition-transform duration-300"></div>
-                    <div class="space-y-1">
-                      <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Relatórios Emitidos</span>
-                      <div class="text-xl font-black text-slate-800 dark:text-white">{totalLaudos}</div>
-                      <p class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">Documentos gerados</p>
+                  {/* Card 3: Total Relatórios */}
+                  <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/30 p-4 rounded-2xl flex flex-col justify-between relative overflow-hidden group shadow-sm hover:shadow-md transition-all duration-200">
+                    <div class="absolute w-16 h-16 bg-blue-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-125 transition-transform duration-300 pointer-events-none"></div>
+                    <div class="flex items-center justify-between w-full">
+                      <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Relatórios</span>
+                      <div class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
+                        <FileText size={14} />
+                      </div>
                     </div>
-                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20 shadow-md">
-                      <FileText size={20} />
+                    <div class="mt-3">
+                      <div class="text-lg font-black text-slate-800 dark:text-white tracking-tight truncate">
+                        {totalReports} <span class="text-xs font-bold text-slate-500">relatórios</span>
+                      </div>
+                      <p class="text-[9px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">Emitidos pela empresa</p>
                     </div>
                   </div>
 
                   {/* Card 4: Ticket Médio / ha */}
-                  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 p-5 rounded-2xl flex items-center justify-between relative overflow-hidden group shadow-lg">
-                    <div class="absolute w-24 h-24 bg-amber-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-110 transition-transform duration-300"></div>
-                    <div class="space-y-1">
-                      <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Valor Médio / ha</span>
-                      <div class="text-xl font-black text-amber-700 dark:text-amber-400">
-                        {ticketMedioHa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/30 p-4 rounded-2xl flex flex-col justify-between relative overflow-hidden group shadow-sm hover:shadow-md transition-all duration-200">
+                    <div class="absolute w-16 h-16 bg-amber-500/5 rounded-full -right-4 -bottom-4 group-hover:scale-125 transition-transform duration-300 pointer-events-none"></div>
+                    <div class="flex items-center justify-between w-full">
+                      <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Média / ha</span>
+                      <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20">
+                        <Activity size={14} />
                       </div>
-                      <p class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">Valor médio por hectare</p>
                     </div>
-                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 shadow-md">
-                      <Activity size={20} />
+                    <div class="mt-3">
+                      <div class="text-lg font-black text-amber-700 dark:text-amber-400 tracking-tight truncate">
+                        {ticketMedioHa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+                      </div>
+                      <p class="text-[9px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">Valor por hectare</p>
                     </div>
                   </div>
                 </div>
@@ -987,7 +1283,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                             const maxPilotArea = Math.max(...pilotPerformance.map(p => p.area), 0);
                             const heightPercent = maxPilotArea > 0 ? (item.area / maxPilotArea) * 80 : 0;
                             return (
-                              <div key={idx} class="flex flex-col items-center group relative flex-1 max-w-[80px] px-1">
+                              <div key={idx} class="flex flex-col items-center justify-end h-full group relative flex-1 max-w-[80px] px-1">
                                 {/* Tooltip no hover */}
                                 <div class={`absolute -top-12 bg-slate-900 border border-slate-700 text-white rounded-xl px-2.5 py-1.5 text-[10px] font-black text-center z-10 pointer-events-none transition-all duration-200 ${
                                   hoveredBarIndex === idx ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-1 scale-95'
@@ -1117,7 +1413,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                   </div>
                  </div>
 
-                {/* Laudos Recentes */}
+                {/* Relatórios Recentes */}
                 <div class="bg-slate-800 border border-slate-700/40 rounded-2xl overflow-hidden">
                   <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
                     <h4 class="text-sm font-bold text-primary-400 uppercase tracking-wider flex items-center space-x-2">
@@ -1146,16 +1442,16 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                             <th class="px-6 py-3 text-center">Ação</th>
                           </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-700/40 text-xs font-semibold text-slate-300">
+                        <tbody class="divide-y divide-slate-200/60 dark:divide-slate-700/40 text-xs font-semibold text-slate-700 dark:text-slate-300">
                           {recentReports.map(r => (
-                            <tr key={r.id} class="hover:bg-slate-700/10">
+                            <tr key={r.id} class="hover:bg-slate-50 dark:hover:bg-slate-700/10 border-b border-slate-100 dark:border-slate-700/30">
                               <td class="px-6 py-3">
-                                <div class="font-bold text-white">{r.client_name}</div>
+                                <div class="font-bold text-slate-800 dark:text-white">{r.client_name}</div>
                                 <div class="text-[10px] text-slate-500 font-semibold">{r.farm_name}</div>
                               </td>
                               <td class="px-6 py-3">{new Date(r.report_date).toLocaleDateString('pt-BR')}</td>
                               <td class="px-6 py-3 font-bold">{r.total_area} ha</td>
-                              <td class="px-6 py-3 text-emerald-400 font-black">
+                              <td class="px-6 py-3 text-emerald-600 dark:text-emerald-400 font-black">
                                 {r.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                               </td>
                               <td class="px-6 py-3 text-center">
@@ -1475,6 +1771,84 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                         class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                       />
                     </div>
+
+                    <div>
+                      <label class="block text-slate-300 text-xs font-bold mb-1">Tipo de Remuneração *</label>
+                      <select
+                        value={pilotCommissionType}
+                        onChange={(e) => setPilotCommissionType(e.target.value)}
+                        class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                      >
+                        <option value="salary_plus_commission_per_ha">Salário Fixo + Comissão/ha</option>
+                        <option value="commission_per_ha">Apenas Comissão por Hectare</option>
+                        <option value="percentage_revenue">Porcentagem no Faturamento</option>
+                      </select>
+                    </div>
+
+                    {pilotCommissionType === 'salary_plus_commission_per_ha' && (
+                      <div class="grid grid-cols-2 gap-3">
+                        <div>
+                          <label class="block text-slate-300 text-xs font-bold mb-1">Salário Fixo (R$)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            required
+                            min="0"
+                            value={pilotSalaryBase}
+                            onChange={(e) => setPilotSalaryBase(e.target.value)}
+                            placeholder="Ex: 2500"
+                            class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-slate-300 text-xs font-bold mb-1">Comissão/ha (R$)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            required
+                            min="0"
+                            value={pilotCommissionPerHa}
+                            onChange={(e) => setPilotCommissionPerHa(e.target.value)}
+                            placeholder="Ex: 10"
+                            class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {pilotCommissionType === 'commission_per_ha' && (
+                      <div>
+                        <label class="block text-slate-300 text-xs font-bold mb-1">Comissão por Hectare (R$)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          required
+                          min="0"
+                          value={pilotCommissionPerHa}
+                          onChange={(e) => setPilotCommissionPerHa(e.target.value)}
+                          placeholder="Ex: 15"
+                          class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                        />
+                      </div>
+                    )}
+
+                    {pilotCommissionType === 'percentage_revenue' && (
+                      <div>
+                        <label class="block text-slate-300 text-xs font-bold mb-1">Porcentagem no Faturamento (%)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          required
+                          min="0"
+                          max="100"
+                          value={pilotCommissionPercentage}
+                          onChange={(e) => setPilotCommissionPercentage(e.target.value)}
+                          placeholder="Ex: 10"
+                          class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                        />
+                      </div>
+                    )}
+
                     <button
                       type="submit"
                       class="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white font-bold rounded-xl text-sm transition-all"
@@ -1485,9 +1859,9 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                 </div>
 
                 {/* Lista de Pilotos */}
-                <div class="lg:col-span-2 bg-slate-800 border border-slate-700/40 rounded-2xl overflow-hidden">
-                  <div class="px-6 py-5 border-b border-slate-700">
-                    <h3 class="text-lg font-bold">Pilotos Registrados</h3>
+                <div class="lg:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 rounded-2xl overflow-hidden">
+                  <div class="px-6 py-5 border-b border-slate-200 dark:border-slate-700">
+                    <h3 class="text-lg font-bold text-slate-900 dark:text-white">Pilotos Registrados</h3>
                   </div>
 
                   {pilots.length === 0 ? (
@@ -1496,21 +1870,55 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                     <div class="overflow-x-auto">
                       <table class="w-full text-left border-collapse">
                         <thead>
-                          <tr class="bg-slate-900/50 text-slate-400 text-xs font-bold uppercase border-b border-slate-700">
+                          <tr class="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase border-b border-slate-200 dark:border-slate-700">
                             <th class="px-6 py-3">Nome</th>
                             <th class="px-6 py-3">Usuário</th>
+                            <th class="px-6 py-3">Regra de Remuneração</th>
                             <th class="px-6 py-3">Data de Cadastro</th>
                             <th class="px-6 py-3 text-center">Ações</th>
                           </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-700/40">
+                        <tbody class="divide-y divide-slate-200/60 dark:divide-slate-700/40">
                           {pilots.map(p => (
-                            <tr key={p.id} class="hover:bg-slate-700/10">
+                            <tr key={p.id} class="hover:bg-slate-50 dark:hover:bg-slate-700/10 text-slate-800 dark:text-slate-250 border-b border-slate-100 dark:border-slate-700/30">
                               <td class="px-6 py-4 font-semibold text-slate-800 dark:text-white">{p.name}</td>
-                              <td class="px-6 py-4 text-slate-300 text-sm font-semibold">{p.username}</td>
-                              <td class="px-6 py-4 text-slate-400 text-sm">{new Date(p.created_at).toLocaleDateString('pt-BR')}</td>
+                              <td class="px-6 py-4 text-slate-700 dark:text-slate-300 text-sm font-semibold">{p.username}</td>
+                              <td class="px-6 py-4 text-xs font-semibold text-slate-705 dark:text-slate-300">
+                                {p.commission_type === 'salary_plus_commission_per_ha' && (
+                                  <div>
+                                    <span class="block font-bold text-slate-900 dark:text-white">Fixo + Com./ha</span>
+                                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                                      Fixo: R$ {(p.salary_base || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + R$ {(p.commission_per_ha || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/ha
+                                    </span>
+                                  </div>
+                                )}
+                                {p.commission_type === 'commission_per_ha' && (
+                                  <div>
+                                    <span class="block font-bold text-slate-900 dark:text-white">Comissão/ha</span>
+                                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                                      R$ {(p.commission_per_ha || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/ha
+                                    </span>
+                                  </div>
+                                )}
+                                {p.commission_type === 'percentage_revenue' && (
+                                  <div>
+                                    <span class="block font-bold text-slate-900 dark:text-white">Porcentagem no Fat.</span>
+                                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                                      {p.commission_percentage || 0}% do Faturamento
+                                    </span>
+                                  </div>
+                                )}
+                              </td>
+                              <td class="px-6 py-4 text-slate-550 dark:text-slate-400 text-sm">{new Date(p.created_at).toLocaleDateString('pt-BR')}</td>
                               <td class="px-6 py-4 text-center">
                                 <div class="flex items-center justify-center space-x-2">
+                                  <button
+                                    onClick={() => { triggerHaptic(10); handleOpenRemunerationModal(p); }}
+                                    class="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-450 bg-slate-950/20 hover:bg-emerald-500/10 border border-slate-700/60 hover:border-emerald-500/20 rounded-lg transition-all"
+                                    title="Configurar Remuneração"
+                                  >
+                                    <DollarSign size={16} />
+                                  </button>
                                   <button
                                     onClick={() => { triggerHaptic(10); setSelectedPilotForPassword(p); }}
                                     class="p-2 text-slate-400 hover:text-primary-600 dark:hover:text-primary-450 bg-slate-950/20 hover:bg-primary-500/10 border border-slate-700/60 hover:border-primary-500/20 rounded-lg transition-all"
@@ -1537,7 +1945,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
               </div>
             )}
 
-            {/* ABA: LAUDOS EMITIDOS */}
+            {/* ABA: RELATÓRIOS EMITIDOS */}
             {activeTab === 'reports' && (
               <>
                 {offlineDrafts.length > 0 && (
@@ -1570,7 +1978,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                           {offlineDrafts.map(draft => (
                             <tr key={draft.id} class="hover:bg-slate-700/10">
                               <td class="px-6 py-3">
-                                <div class="font-bold text-white">{draft.client_name || 'Sem nome'}</div>
+                                <div class="font-bold text-slate-800 dark:text-white">{draft.client_name || 'Sem nome'}</div>
                                 <div class="text-[10px] text-slate-500 font-semibold">{draft.farm_name || 'Sem fazenda'}</div>
                               </td>
                               <td class="px-6 py-3">{draft.culture || 'Não informada'}</td>
@@ -1609,9 +2017,9 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                   </div>
                 )}
 
-                <div class="bg-slate-800 border border-slate-700/40 rounded-2xl overflow-hidden">
-                  <div class="px-6 py-5 border-b border-slate-700 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <h3 class="text-lg font-bold">Histórico de Relatórios da Empresa</h3>
+                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/40 rounded-2xl overflow-hidden">
+                  <div class="px-6 py-5 border-b border-slate-200 dark:border-slate-700 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <h3 class="text-lg font-bold text-slate-900 dark:text-white">Histórico de Relatórios da Empresa</h3>
                     <div class="flex items-center gap-3 flex-wrap w-full md:w-auto">
                       <div class="relative w-full md:w-60">
                         <input
@@ -1704,7 +2112,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                       <div class="hidden md:block overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                           <thead>
-                            <tr class="bg-slate-900/50 text-slate-400 text-xs font-bold uppercase border-b border-slate-700">
+                            <tr class="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase border-b border-slate-200 dark:border-slate-700">
                               <th class="px-6 py-3">Cliente / Fazenda</th>
                               <th class="px-6 py-3">Data Aplicação</th>
                               <th class="px-6 py-3">Área Total (ha)</th>
@@ -1713,19 +2121,19 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                               <th class="px-6 py-3 text-center">Ações</th>
                             </tr>
                           </thead>
-                          <tbody class="divide-y divide-slate-700/40">
+                          <tbody class="divide-y divide-slate-200/60 dark:divide-slate-700/40">
                             {filteredReports.map(r => (
-                              <tr key={r.id} class="hover:bg-slate-700/10">
+                              <tr key={r.id} class="hover:bg-slate-50 dark:hover:bg-slate-700/10 text-slate-800 dark:text-slate-250 border-b border-slate-100 dark:border-slate-700/30">
                                 <td class="px-6 py-4">
-                                  <div class="font-semibold text-white">{r.client_name}</div>
-                                  <div class="text-xs text-slate-400 font-semibold">{r.farm_name}</div>
+                                  <div class="font-semibold text-slate-900 dark:text-white">{r.client_name}</div>
+                                  <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">{r.farm_name}</div>
                                 </td>
-                                <td class="px-6 py-4 text-sm font-semibold text-slate-300">{new Date(r.report_date).toLocaleDateString('pt-BR')}</td>
-                                <td class="px-6 py-4 text-sm font-bold text-slate-300">{r.total_area} ha</td>
-                                <td class="px-6 py-4 text-sm font-black text-emerald-400">
+                                <td class="px-6 py-4 text-sm font-semibold text-slate-700 dark:text-slate-300">{new Date(r.report_date).toLocaleDateString('pt-BR')}</td>
+                                <td class="px-6 py-4 text-sm font-bold text-slate-700 dark:text-slate-300">{r.total_area} ha</td>
+                                <td class="px-6 py-4 text-sm font-black text-emerald-600 dark:text-emerald-400">
                                   {r.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                 </td>
-                                <td class="px-6 py-4 text-sm font-semibold text-slate-300">{r.pilot_name}</td>
+                                <td class="px-6 py-4 text-sm font-semibold text-slate-700 dark:text-slate-300">{r.pilot_name}</td>
                                 <td class="px-6 py-4 text-center">
                                   <div class="flex items-center justify-center space-x-2">
                                     <button
@@ -1847,7 +2255,7 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
           }`}
         >
           <FileText size={18} />
-          <span class="text-[9px] font-bold">Laudos</span>
+          <span class="text-[9px] font-bold">Relatórios</span>
         </button>
 
         <button
@@ -1944,6 +2352,127 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
                   class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-xs font-bold transition-all"
                 >
                   Salvar Senha
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Configuração de Remuneração do Piloto */}
+      {selectedPilotForRemuneration && (
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 w-full max-w-md rounded-2xl shadow-2xl p-6 space-y-4 text-slate-800 dark:text-slate-100">
+            <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700/60 pb-3">
+              <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                <DollarSign size={18} class="text-emerald-500" />
+                <span>Configurar Remuneração</span>
+              </h3>
+              <button 
+                onClick={() => setSelectedPilotForRemuneration(null)}
+                class="text-slate-400 hover:text-slate-650 dark:hover:text-white text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <p class="text-xs text-slate-550 dark:text-slate-400">
+              Configure a regra de remuneração para o piloto <strong class="text-slate-900 dark:text-white">{selectedPilotForRemuneration.name}</strong> ({selectedPilotForRemuneration.username}).
+            </p>
+            
+            {editRemunerationSuccess && <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-200 px-3 py-2 rounded-xl text-xs">{editRemunerationSuccess}</div>}
+            {editRemunerationError && <div class="bg-red-500/10 border border-red-500/20 text-red-650 dark:text-red-200 px-3 py-2 rounded-xl text-xs">{editRemunerationError}</div>}
+
+            <form onSubmit={handleUpdatePilotRemuneration} class="space-y-4">
+              <div>
+                <label class="block text-slate-505 dark:text-slate-350 text-xs font-bold mb-1.5">Tipo de Remuneração</label>
+                <select
+                  value={editCommissionType}
+                  onChange={(e) => setEditCommissionType(e.target.value)}
+                  class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-primary-500 focus:outline-none transition-all font-medium text-sm"
+                >
+                  <option value="salary_plus_commission_per_ha">Salário Fixo + Comissão por Hectare</option>
+                  <option value="commission_per_ha">Apenas Comissão por Hectare</option>
+                  <option value="percentage_revenue">Porcentagem no Faturamento</option>
+                </select>
+              </div>
+
+              {editCommissionType === 'salary_plus_commission_per_ha' && (
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-slate-505 dark:text-slate-350 text-xs font-bold mb-1.5">Salário Fixo (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      min="0"
+                      value={editSalaryBase}
+                      onChange={(e) => setEditSalaryBase(e.target.value)}
+                      placeholder="Ex: 2500"
+                      class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-primary-500 focus:outline-none transition-all font-medium text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-slate-550 dark:text-slate-350 text-xs font-bold mb-1.5">Comissão / ha (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      min="0"
+                      value={editCommissionPerHa}
+                      onChange={(e) => setEditCommissionPerHa(e.target.value)}
+                      placeholder="Ex: 10"
+                      class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-primary-500 focus:outline-none transition-all font-medium text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {editCommissionType === 'commission_per_ha' && (
+                <div>
+                  <label class="block text-slate-505 dark:text-slate-350 text-xs font-bold mb-1.5">Comissão por Hectare (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    min="0"
+                    value={editCommissionPerHa}
+                    onChange={(e) => setEditCommissionPerHa(e.target.value)}
+                    placeholder="Ex: 15"
+                    class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-primary-500 focus:outline-none transition-all font-medium text-sm"
+                  />
+                </div>
+              )}
+
+              {editCommissionType === 'percentage_revenue' && (
+                <div>
+                  <label class="block text-slate-505 dark:text-slate-350 text-xs font-bold mb-1.5">Porcentagem no Faturamento (%)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    required
+                    min="0"
+                    max="100"
+                    value={editCommissionPercentage}
+                    onChange={(e) => setEditCommissionPercentage(e.target.value)}
+                    placeholder="Ex: 10"
+                    class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:border-primary-500 focus:outline-none transition-all font-medium text-sm"
+                  />
+                </div>
+              )}
+              
+              <div class="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPilotForRemuneration(null)}
+                  class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-650 rounded-xl text-xs font-bold transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-xs font-bold transition-all"
+                >
+                  Salvar Remuneração
                 </button>
               </div>
             </form>

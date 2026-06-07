@@ -7,6 +7,7 @@ exports.listCompanies = (req, res) => {
     `SELECT c.*, 
      (SELECT name FROM users WHERE company_id = c.id AND role = 'admin' LIMIT 1) as admin_name,
      (SELECT username FROM users WHERE company_id = c.id AND role = 'admin' LIMIT 1) as admin_username,
+     (SELECT email FROM users WHERE company_id = c.id AND role = 'admin' LIMIT 1) as admin_email,
      (SELECT COUNT(*) FROM users WHERE company_id = c.id AND role = 'pilot') as pilot_count,
      (SELECT COUNT(*) FROM reports WHERE company_id = c.id) as report_count
      FROM companies c 
@@ -30,7 +31,8 @@ exports.createCompany = async (req, res) => {
     plan_expires_at, 
     admin_name, 
     admin_username, 
-    admin_password 
+    admin_password,
+    admin_email
   } = req.body;
 
   if (!name || !admin_name || !admin_username || !admin_password) {
@@ -58,9 +60,9 @@ exports.createCompany = async (req, res) => {
 
     // 3. Inserir Usuário Administrador
     await client.query(
-      `INSERT INTO users (username, password, role, company_id, name) 
-       VALUES ($1, $2, 'admin', $3, $4)`,
-      [admin_username, hashedPassword, companyId, admin_name]
+      `INSERT INTO users (username, password, role, company_id, name, email) 
+       VALUES ($1, $2, 'admin', $3, $4, $5)`,
+      [admin_username, hashedPassword, companyId, admin_name, admin_email ? admin_email.trim().toLowerCase() : '']
     );
 
     await client.query("COMMIT");
@@ -94,7 +96,8 @@ exports.updateCompany = async (req, res) => {
     plan_expires_at,
     admin_name,
     admin_username,
-    admin_password
+    admin_password,
+    admin_email
   } = req.body;
 
   if (!name) {
@@ -131,17 +134,17 @@ exports.updateCompany = async (req, res) => {
           const hashedPassword = bcrypt.hashSync(admin_password, salt);
           await client.query(
             `UPDATE users 
-             SET name = $1, username = $2, password = $3 
-             WHERE id = $4`,
-            [admin_name, admin_username, hashedPassword, adminUserId]
+             SET name = $1, username = $2, password = $3, email = $4 
+             WHERE id = $5`,
+            [admin_name, admin_username, hashedPassword, admin_email ? admin_email.trim().toLowerCase() : '', adminUserId]
           );
         } else {
           // Atualiza sem mexer na senha
           await client.query(
             `UPDATE users 
-             SET name = $1, username = $2 
-             WHERE id = $3`,
-            [admin_name, admin_username, adminUserId]
+             SET name = $1, username = $2, email = $3 
+             WHERE id = $4`,
+            [admin_name, admin_username, admin_email ? admin_email.trim().toLowerCase() : '', adminUserId]
           );
         }
       } else {
@@ -150,9 +153,9 @@ exports.updateCompany = async (req, res) => {
           const salt = bcrypt.genSaltSync(10);
           const hashedPassword = bcrypt.hashSync(admin_password, salt);
           await client.query(
-            `INSERT INTO users (username, password, role, company_id, name) 
-             VALUES ($1, $2, 'admin', $3, $4)`,
-            [admin_username, hashedPassword, id, admin_name]
+            `INSERT INTO users (username, password, role, company_id, name, email) 
+             VALUES ($1, $2, 'admin', $3, $4, $5)`,
+            [admin_username, hashedPassword, id, admin_name, admin_email ? admin_email.trim().toLowerCase() : '']
           );
         }
       }
@@ -225,7 +228,7 @@ exports.listPlans = (req, res) => {
 
 // Criar um novo plano
 exports.createPlan = (req, res) => {
-  const { name, description, max_devices } = req.body;
+  const { name, description, max_devices, checkout_link } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'O nome do plano é obrigatório.' });
   }
@@ -233,8 +236,8 @@ exports.createPlan = (req, res) => {
   const limit = parseInt(max_devices, 10) || 1;
 
   db.run(
-    `INSERT INTO plans (name, description, max_devices) VALUES (?, ?, ?)`,
-    [name, description || '', limit],
+    `INSERT INTO plans (name, description, max_devices, checkout_link) VALUES (?, ?, ?, ?)`,
+    [name, description || '', limit, checkout_link || ''],
     function (err) {
       if (err) {
         if (err.message.includes('unique constraint') || err.message.includes('UNIQUE constraint') || err.message.includes('plans_name_key')) {
@@ -250,7 +253,7 @@ exports.createPlan = (req, res) => {
 // Editar um plano existente
 exports.updatePlan = async (req, res) => {
   const { id } = req.params;
-  const { name, description, max_devices } = req.body;
+  const { name, description, max_devices, checkout_link } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'O nome do plano é obrigatório.' });
   }
@@ -271,8 +274,8 @@ exports.updatePlan = async (req, res) => {
 
     // Atualizar a tabela de planos
     await client.query(
-      `UPDATE plans SET name = $1, description = $2, max_devices = $3 WHERE id = $4`,
-      [name, description || '', limit, id]
+      `UPDATE plans SET name = $1, description = $2, max_devices = $3, checkout_link = $4 WHERE id = $5`,
+      [name, description || '', limit, checkout_link || '', id]
     );
 
     // Se o nome mudou, atualizar a tabela de empresas que usavam este plano

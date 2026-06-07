@@ -21,6 +21,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
   const [adminName, setAdminName] = useState('');
   const [adminUsername, setAdminUsername] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
 
@@ -30,8 +31,16 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
   const [planNameInput, setPlanNameInput] = useState('');
   const [planDescriptionInput, setPlanDescriptionInput] = useState('');
   const [planMaxDevicesInput, setPlanMaxDevicesInput] = useState(1);
+  const [planCheckoutLinkInput, setPlanCheckoutLinkInput] = useState('');
   const [planFormError, setPlanFormError] = useState('');
   const [planFormSuccess, setPlanFormSuccess] = useState('');
+
+  // Status das integrações
+  const [integrationsStatus, setIntegrationsStatus] = useState({
+    smtpConfigured: false,
+    hotmartConfigured: false,
+    asaasConfigured: false
+  });
 
   // Campos do perfil do SuperAdmin
   const [profileName, setProfileName] = useState('');
@@ -56,6 +65,10 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
       const plansRes = await fetch('/api/super/plans', { headers });
       const plansData = await plansRes.json();
       if (plansRes.ok) setPlans(plansData.plans || []);
+
+      const statusRes = await fetch('/api/super/integrations-status', { headers });
+      const statusData = await statusRes.json();
+      if (statusRes.ok) setIntegrationsStatus(statusData);
 
       const userRes = await fetch('/api/auth/me', { headers });
       const userData = await userRes.json();
@@ -84,6 +97,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
     setAdminName('');
     setAdminUsername('');
     setAdminPassword('');
+    setAdminEmail('');
     setFormError('');
     setFormSuccess('');
     setModalOpen(true);
@@ -97,6 +111,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
     setAdminName(company.admin_name || '');
     setAdminUsername(company.admin_username || '');
     setAdminPassword('');
+    setAdminEmail(company.admin_email || '');
     
     let dateStr = '';
     if (company.plan_expires_at) {
@@ -147,7 +162,8 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
             plan_status: editingCompany.plan_status,
             admin_name: adminName,
             admin_username: adminUsername,
-            admin_password: adminPassword
+            admin_password: adminPassword,
+            admin_email: adminEmail
           }
         : {
             name,
@@ -156,7 +172,8 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
             plan_expires_at: planExpiresAt,
             admin_name: adminName,
             admin_username: adminUsername,
-            admin_password: adminPassword
+            admin_password: adminPassword,
+            admin_email: adminEmail
           };
 
       const response = await fetch(url, {
@@ -183,6 +200,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
         setAdminName('');
         setAdminUsername('');
         setAdminPassword('');
+        setAdminEmail('');
       }
 
       fetchStatsAndCompanies();
@@ -242,6 +260,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
     setPlanNameInput('');
     setPlanDescriptionInput('');
     setPlanMaxDevicesInput(1);
+    setPlanCheckoutLinkInput('');
     setPlanFormError('');
     setPlanFormSuccess('');
     setPlanModalOpen(true);
@@ -252,6 +271,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
     setPlanNameInput(plan.name);
     setPlanDescriptionInput(plan.description || '');
     setPlanMaxDevicesInput(plan.max_devices || 1);
+    setPlanCheckoutLinkInput(plan.checkout_link || '');
     setPlanFormError('');
     setPlanFormSuccess('');
     setPlanModalOpen(true);
@@ -282,7 +302,8 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
         body: JSON.stringify({
           name: planNameInput,
           description: planDescriptionInput,
-          max_devices: planMaxDevicesInput
+          max_devices: planMaxDevicesInput,
+          checkout_link: planCheckoutLinkInput
         })
       });
 
@@ -297,6 +318,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
         setPlanNameInput('');
         setPlanDescriptionInput('');
         setPlanMaxDevicesInput(1);
+        setPlanCheckoutLinkInput('');
       }
 
       fetchStatsAndCompanies();
@@ -463,10 +485,10 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
         </section>
 
         {/* Tabs Navigation */}
-        <div class="flex border-b border-slate-700 space-x-6">
+        <div class="flex border-b border-slate-750 space-x-6 overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveTab('companies')}
-            class={`pb-4 text-sm font-bold border-b-2 transition-all duration-200 ${
+            class={`pb-4 text-sm font-bold border-b-2 whitespace-nowrap transition-all duration-200 ${
               activeTab === 'companies' 
                 ? 'border-primary-500 text-primary-400' 
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -476,7 +498,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
           </button>
           <button
             onClick={() => setActiveTab('plans')}
-            class={`pb-4 text-sm font-bold border-b-2 transition-all duration-200 ${
+            class={`pb-4 text-sm font-bold border-b-2 whitespace-nowrap transition-all duration-200 ${
               activeTab === 'plans' 
                 ? 'border-primary-500 text-primary-400' 
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -485,8 +507,18 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
             Planos de Assinatura
           </button>
           <button
+            onClick={() => setActiveTab('integrations')}
+            class={`pb-4 text-sm font-bold border-b-2 whitespace-nowrap transition-all duration-200 ${
+              activeTab === 'integrations' 
+                ? 'border-primary-500 text-primary-400' 
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Integrações e Pagamento
+          </button>
+          <button
             onClick={() => setActiveTab('profile')}
-            class={`pb-4 text-sm font-bold border-b-2 transition-all duration-200 ${
+            class={`pb-4 text-sm font-bold border-b-2 whitespace-nowrap transition-all duration-200 ${
               activeTab === 'profile' 
                 ? 'border-primary-500 text-primary-400' 
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -657,6 +689,134 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
                 </table>
               </div>
             )}
+          </section>
+        ) : activeTab === 'integrations' ? (
+          /* Integrations Page */
+          <section class="max-w-4xl mx-auto space-y-8 animate-fadeIn text-slate-100">
+            <div class="bg-slate-800 border border-slate-700/50 p-6 rounded-2xl">
+              <h3 class="text-xl font-bold text-slate-100">Integrações de Pagamento e E-mail</h3>
+              <p class="text-sm text-slate-400 mt-1">Configure o webhook das plataformas para ativação automática e o SMTP para envio de e-mails em nome do seu domínio.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Card Hotmart */}
+              <div class="bg-slate-800 border border-slate-700/50 p-6 rounded-2xl flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-4">
+                    <h4 class="text-lg font-bold text-orange-500">Hotmart</h4>
+                    <span class={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                      integrationsStatus.hotmartConfigured 
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                        : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                    }`}>
+                      {integrationsStatus.hotmartConfigured ? 'Ativo (.env)' : 'Pendente'}
+                    </span>
+                  </div>
+                  <p class="text-sm text-slate-300 mb-4">
+                    Ative a contratação de planos na Hotmart. Ao aprovar uma compra, a conta do cliente é liberada na hora.
+                  </p>
+                  
+                  <div class="bg-slate-900/50 p-4 rounded-xl space-y-3 text-xs">
+                    <div>
+                      <span class="block text-slate-400 font-bold mb-1">1. URL do Webhook na Hotmart:</span>
+                      <code class="block bg-slate-950 p-2 rounded text-emerald-400 overflow-x-auto select-all font-semibold">
+                        {`${window.location.origin}/api/payments/hotmart-webhook`}
+                      </code>
+                    </div>
+                    <div>
+                      <span class="block text-slate-400 font-bold mb-1">2. Variável necessária no .env:</span>
+                      <code class="block bg-slate-950 p-2 rounded text-slate-300 font-semibold select-all">
+                        HOTMART_TOKEN=seu_token_da_hotmart
+                      </code>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-6 text-xs text-slate-400 border-t border-slate-700/50 pt-4">
+                  <strong>Como obter:</strong> Acesse Ferramentas &gt; Webhook na Hotmart e crie um envio para o evento de "Compra Aprovada". O Token deve ser configurado na VPS.
+                </div>
+              </div>
+
+              {/* Card Asaas */}
+              <div class="bg-slate-800 border border-slate-700/50 p-6 rounded-2xl flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-4">
+                    <h4 class="text-lg font-bold text-blue-500">Asaas</h4>
+                    <span class={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                      integrationsStatus.asaasConfigured 
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                        : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                    }`}>
+                      {integrationsStatus.asaasConfigured ? 'Ativo (.env)' : 'Pendente'}
+                    </span>
+                  </div>
+                  <p class="text-sm text-slate-300 mb-4">
+                    Gere cobranças via Pix e Cartão com liberação instantânea ao receber confirmação da transação.
+                  </p>
+
+                  <div class="bg-slate-900/50 p-4 rounded-xl space-y-3 text-xs">
+                    <div>
+                      <span class="block text-slate-400 font-bold mb-1">1. URL do Webhook no Asaas:</span>
+                      <code class="block bg-slate-950 p-2 rounded text-emerald-400 overflow-x-auto select-all font-semibold">
+                        {`${window.location.origin}/api/payments/asaas-webhook`}
+                      </code>
+                    </div>
+                    <div>
+                      <span class="block text-slate-400 font-bold mb-1">2. Variáveis necessárias no .env:</span>
+                      <code class="block bg-slate-950 p-2 rounded text-slate-305 text-slate-300 font-semibold select-all mb-1">
+                        ASAAS_API_KEY=sua_chave_de_api
+                      </code>
+                      <code class="block bg-slate-950 p-2 rounded text-slate-300 font-semibold select-all">
+                        ASAAS_WEBHOOK_TOKEN=seu_token_webhook
+                      </code>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-6 text-xs text-slate-400 border-t border-slate-700/50 pt-4">
+                  <strong>Como obter:</strong> No painel do Asaas, acesse Minha Conta &gt; Integrações. Gere a chave da API e ative a fila de Webhook para "Pagamento Recebido".
+                </div>
+              </div>
+            </div>
+
+            {/* SMTP Card */}
+            <div class="bg-slate-800 border border-slate-700/50 p-6 rounded-2xl">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="text-lg font-bold text-emerald-400">E-mail corporativo próprio (SMTP / Domínio Próprio)</h4>
+                <span class={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                  integrationsStatus.smtpConfigured 
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                    : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                }`}>
+                  {integrationsStatus.smtpConfigured ? 'Ativo (.env)' : 'Pendente'}
+                </span>
+              </div>
+              <p class="text-sm text-slate-300 mb-4">
+                Configure os dados do seu próprio e-mail (ex: Zoho, Google, Outlook, Titan) para disparar dados de acesso aos clientes a partir do seu endereço oficial, sem citar marcas terceiras.
+              </p>
+
+              <div class="bg-slate-900/50 p-4 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
+                <div class="space-y-2">
+                  <div>
+                    <span class="block text-slate-400 font-bold mb-1">SMTP_HOST:</span>
+                    <code class="block bg-slate-950 p-2 rounded text-slate-300 select-all font-semibold">SMTP_HOST=smtp.titan.email (ou similar)</code>
+                  </div>
+                  <div>
+                    <span class="block text-slate-400 font-bold mb-1">SMTP_PORT:</span>
+                    <code class="block bg-slate-950 p-2 rounded text-slate-300 select-all font-semibold">SMTP_PORT=587 (ou 465)</code>
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <div>
+                    <span class="block text-slate-400 font-bold mb-1">SMTP_USER e SMTP_PASS:</span>
+                    <code class="block bg-slate-950 p-2 rounded text-slate-300 select-all font-semibold mb-1">SMTP_USER=suporte@seu-dominio.com</code>
+                    <code class="block bg-slate-950 p-2 rounded text-slate-300 select-all font-semibold">SMTP_PASS=sua_senha_de_app_ou_conta</code>
+                  </div>
+                  <div>
+                    <span class="block text-slate-400 font-bold mb-1">SMTP_FROM:</span>
+                    <code class="block bg-slate-950 p-2 rounded text-slate-300 select-all font-semibold">SMTP_FROM=suporte@seu-dominio.com</code>
+                  </div>
+                </div>
+              </div>
+            </div>
           </section>
         ) : (
           /* Profile Section */
@@ -837,6 +997,17 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
                     />
                   </div>
                   <div>
+                    <label class="block text-slate-300 text-xs font-bold mb-1.5">E-mail do Admin *</label>
+                    <input
+                      type="email"
+                      required
+                      value={adminEmail}
+                      onChange={(e) => setAdminEmail(e.target.value)}
+                      placeholder="Ex: joao@empresa.com"
+                      class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                    />
+                  </div>
+                  <div>
                     <label class="block text-slate-300 text-xs font-bold mb-1.5">Nome de Usuário *</label>
                     <input
                       type="text"
@@ -940,6 +1111,16 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
                     value={planMaxDevicesInput}
                     onChange={(e) => setPlanMaxDevicesInput(parseInt(e.target.value, 10) || 1)}
                     placeholder="Ex: 3"
+                    class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                  />
+                </div>
+                <div>
+                  <label class="block text-slate-300 text-xs font-bold mb-1.5">Link de Checkout de Pagamento (Hotmart/Asaas)</label>
+                  <input
+                    type="url"
+                    value={planCheckoutLinkInput}
+                    onChange={(e) => setPlanCheckoutLinkInput(e.target.value)}
+                    placeholder="Ex: https://pay.hotmart.com/... ou https://cobranca.asaas.com/..."
                     class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                   />
                 </div>

@@ -45,7 +45,7 @@ exports.createReport = (req, res) => {
       flights_data, weather_temp, weather_humidity, weather_desc, delta_t,
       caldas_data, ph_photo_url, ph_desc, maps_data, observations,
       total_area, price_per_ha, total_price, pilot_signature, client_signature, weather_forecast
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       pilotId,
       companyId,

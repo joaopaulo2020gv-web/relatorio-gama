@@ -137,7 +137,11 @@ exports.login = (req, res) => {
                     name: user.name,
                     company_name: user.company_name,
                     cnpj: user.cnpj,
-                    logo_url: user.logo_url
+                    logo_url: user.logo_url,
+                    commission_type: user.commission_type,
+                    salary_base: user.salary_base,
+                    commission_per_ha: user.commission_per_ha,
+                    commission_percentage: user.commission_percentage
                   }
                 });
               }
@@ -154,7 +158,7 @@ exports.getCurrentUser = (req, res) => {
   const { id } = req.user;
 
   db.get(
-    `SELECT u.id, u.username, u.role, u.company_id, u.name, c.name as company_name, c.cnpj, c.plan_status, c.logo_url 
+    `SELECT u.id, u.username, u.role, u.company_id, u.name, u.commission_type, u.salary_base, u.commission_per_ha, u.commission_percentage, c.name as company_name, c.cnpj, c.plan_status, c.logo_url 
      FROM users u 
      LEFT JOIN companies c ON u.company_id = c.id 
      WHERE u.id = ?`,
@@ -172,3 +176,65 @@ exports.getCurrentUser = (req, res) => {
     }
   );
 };
+
+// Auto-registro público para novas empresas e administradores
+exports.register = async (req, res) => {
+  const { 
+    companyName, 
+    cnpj, 
+    adminName, 
+    adminUsername, 
+    adminPassword,
+    adminEmail
+  } = req.body;
+
+  if (!companyName || !adminName || !adminUsername || !adminPassword || !adminEmail) {
+    return res.status(400).json({ error: 'Nome da empresa, nome do administrador, e-mail, usuário e senha são obrigatórios.' });
+  }
+
+  // Obter um cliente do pool do PostgreSQL para executar a transação de forma segura
+  const client = await db.pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // 1. Inserir Empresa
+    // O plano padrão ao se auto-cadastrar é 'Básico' e sem expiração definida inicialmente
+    const companyRes = await client.query(
+      `INSERT INTO companies (name, cnpj, plan_name, plan_status, plan_expires_at) 
+       VALUES ($1, $2, 'Básico', 'active', '') RETURNING id`,
+      [companyName, cnpj || '']
+    );
+
+    const companyId = companyRes.rows[0].id;
+
+    // 2. Hash da senha do administrador
+    const salt = bcrypt.genSaltSync(10);
+    const hashedPassword = bcrypt.hashSync(adminPassword, salt);
+
+    // 3. Inserir Usuário Administrador da nova empresa
+    await client.query(
+      `INSERT INTO users (username, password, role, company_id, name, email) 
+       VALUES ($1, $2, 'admin', $3, $4, $5)`,
+      [adminUsername, hashedPassword, companyId, adminName, adminEmail.trim().toLowerCase()]
+    );
+
+    await client.query("COMMIT");
+
+    return res.status(201).json({ 
+      message: 'Conta criada com sucesso! Você já pode realizar o login.',
+      company_id: companyId
+    });
+
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error('Erro na transação de cadastro público:', err);
+    if (err.message.includes('unique constraint') || err.message.includes('UNIQUE constraint') || err.message.includes('users_username_key')) {
+      return res.status(400).json({ error: 'Este nome de usuário já está em uso.' });
+    }
+    return res.status(500).json({ error: 'Erro interno ao criar conta e registrar empresa.' });
+  } finally {
+    client.release();
+  }
+};
+

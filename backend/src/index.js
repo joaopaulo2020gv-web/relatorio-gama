@@ -12,6 +12,7 @@ const authController = require('./controllers/authController');
 const superAdminController = require('./controllers/superAdminController');
 const clientAdminController = require('./controllers/clientAdminController');
 const reportController = require('./controllers/reportController');
+const paymentController = require('./controllers/paymentController');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -58,11 +59,23 @@ const upload = multer({
 // ROTAS DE AUTENTICAÇÃO
 // ==========================================
 app.post('/api/auth/login', authController.login);
+app.post('/api/auth/register', authController.register);
 app.get('/api/auth/me', auth.authenticateToken, authController.getCurrentUser);
+
+// ==========================================
+// ROTAS DE PAGAMENTO (WEBHOOKS PÚBLICOS)
+// ==========================================
+app.post('/api/payments/hotmart-webhook', paymentController.hotmartWebhook);
+app.post('/api/payments/asaas-webhook', paymentController.asaasWebhook);
 
 // ==========================================
 // ROTAS DO SUPER ADMIN (Nível 3)
 // ==========================================
+app.get('/api/super/integrations-status',
+  auth.authenticateToken,
+  auth.requireSuperAdmin,
+  paymentController.getIntegrationsStatus
+);
 app.get('/api/super/companies', 
   auth.authenticateToken, 
   auth.requireSuperAdmin, 
@@ -149,6 +162,11 @@ app.put('/api/admin/pilots/:id/password',
   auth.authenticateToken, 
   auth.requireCompanyAdmin, 
   clientAdminController.updatePilotPassword
+);
+app.put('/api/admin/pilots/:id/remuneration', 
+  auth.authenticateToken, 
+  auth.requireCompanyAdmin, 
+  clientAdminController.updatePilotRemuneration
 );
 app.put('/api/admin/profile', 
   auth.authenticateToken, 

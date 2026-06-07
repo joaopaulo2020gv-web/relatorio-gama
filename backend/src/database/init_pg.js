@@ -131,6 +131,38 @@ async function initPg(pool) {
     `);
     console.log('Colunas opcionais de migração (client_email, client_document, farm_address, pilot_signature, client_signature, weather_forecast) verificadas/criadas na tabela "reports".');
 
+    // Migrações para suporte a pagamentos e e-mails de domínio próprio
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
+    `);
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS commission_type TEXT DEFAULT 'commission_per_ha';
+    `);
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS salary_base REAL DEFAULT 0;
+    `);
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS commission_per_ha REAL DEFAULT 0;
+    `);
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS commission_percentage REAL DEFAULT 0;
+    `);
+    console.log('Colunas de remuneração de pilotos (commission_type, salary_base, commission_per_ha, commission_percentage) verificadas/criadas em "users".');
+
+    await client.query(`
+      ALTER TABLE plans ADD COLUMN IF NOT EXISTS checkout_link TEXT;
+    `);
+    await client.query(`
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS checkout_link TEXT;
+    `);
+    await client.query(`
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS asaas_customer_id TEXT;
+    `);
+    await client.query(`
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS subscription_id TEXT;
+    `);
+    console.log('Colunas de migração de pagamentos e e-mails verificadas/criadas em "users" e "companies".');
+
     // 4. Inserir SuperAdmin padrão se não existir
     const checkRes = await client.query("SELECT COUNT(*) as count FROM users WHERE role = 'superadmin'");
     const count = parseInt(checkRes.rows[0].count, 10);

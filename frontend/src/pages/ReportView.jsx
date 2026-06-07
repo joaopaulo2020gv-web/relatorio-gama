@@ -81,44 +81,45 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
 
   return (
     <div class="report-view-container min-h-screen bg-slate-50 dark:bg-slate-900 md:p-6 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200 animate-slide-up">
-      
       {/* Botões do Topo (Escondidos na Impressão) */}
-      <div class="max-w-4xl mx-auto mb-6 px-4 flex items-center justify-between no-print">
-        <div class="flex items-center space-x-2">
+      <div class="max-w-4xl mx-auto mb-6 px-4 flex items-center justify-between no-print gap-2">
+        <div class="flex items-center space-x-1.5 flex-shrink-0">
           <button
             onClick={onBack}
-            class="flex items-center space-x-2 text-slate-650 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white font-bold text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 px-4 py-2.5 rounded-xl transition-all shadow-xs"
+            class="flex items-center space-x-1.5 text-slate-650 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white font-bold text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 px-3 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer"
           >
-            <ArrowLeft size={16} />
-            <span>Voltar ao Painel</span>
+            <ArrowLeft size={14} />
+            <span class="hidden sm:inline">Voltar ao Painel</span>
+            <span class="sm:hidden">Voltar</span>
           </button>
           
           {/* Botão de Tema */}
           <button
             onClick={toggleTheme}
             type="button"
-            class="p-2.5 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-slate-600/50 rounded-xl transition-all shadow-xs"
+            class="p-2.5 bg-white dark:bg-slate-800 text-slate-650 dark:text-slate-200 border border-slate-200 dark:border-slate-600/50 rounded-xl transition-all shadow-xs cursor-pointer"
             title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
           >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
           </button>
         </div>
         
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-1.5 flex-shrink-0">
           <button
             onClick={handleShareReport}
-            class="flex items-center space-x-2 bg-emerald-605 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-extrabold shadow-lg shadow-emerald-500/10 transition-all"
+            class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg shadow-emerald-500/10 transition-all cursor-pointer"
           >
-            <Share2 size={16} />
-            <span>Compartilhar</span>
+            <Share2 size={14} />
+            <span class="hidden sm:inline">Compartilhar</span>
           </button>
           
           <button
             onClick={() => window.print()}
-            class="flex items-center space-x-2 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-5 py-2.5 rounded-xl text-sm font-extrabold shadow-lg shadow-primary-500/10 transition-all"
+            class="flex items-center space-x-1.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-3.5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg shadow-primary-500/10 transition-all cursor-pointer"
           >
-            <Printer size={16} />
-            <span>Exportar PDF / Imprimir</span>
+            <Printer size={14} />
+            <span class="hidden sm:inline">Exportar PDF / Imprimir</span>
+            <span class="sm:hidden">PDF / Imprimir</span>
           </button>
         </div>
       </div>

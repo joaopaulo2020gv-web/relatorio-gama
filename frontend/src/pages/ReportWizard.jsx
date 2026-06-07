@@ -856,7 +856,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
         }
       }
 
-      onSaveSuccess();
+      onSaveSuccess(data.report_id);
     } catch (err) {
       console.error('Falha ao salvar relatório:', err);
       // Se falhar a conexão (fetch de rede), salvamos offline

@@ -22,7 +22,7 @@ const ReportViewSkeleton = () => (
   </div>
 );
 
-export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
+export default function ReportView({ reportId, onBack, theme, toggleTheme, autoPrint }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -45,6 +45,15 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme }) {
 
     fetchReportDetails();
   }, [reportId]);
+
+  useEffect(() => {
+    if (autoPrint && !loading && report) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [autoPrint, loading, report]);
 
   if (loading) {
     return <ReportViewSkeleton />;

@@ -14,6 +14,7 @@ export default function App() {
   const [page, setPage] = useState('dashboard'); // dashboard, create-report, view-report
   const [selectedReportId, setSelectedReportId] = useState(null);
   const [draftToEdit, setDraftToEdit] = useState(null);
+  const [autoPrint, setAutoPrint] = useState(false);
 
   // Estados para controle de instalação do PWA
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -247,9 +248,11 @@ export default function App() {
           onBack={() => {
             setSelectedReportId(null);
             setPage('dashboard');
+            setAutoPrint(false);
           }}
           theme={theme}
           toggleTheme={toggleTheme}
+          autoPrint={autoPrint}
         />
       );
     }
@@ -276,9 +279,15 @@ export default function App() {
                 setDraftToEdit(null);
                 setPage('dashboard');
               }}
-              onSaveSuccess={() => {
+              onSaveSuccess={(reportId) => {
                 setDraftToEdit(null);
-                setPage('dashboard');
+                if (reportId) {
+                  setSelectedReportId(reportId);
+                  setAutoPrint(true);
+                  setPage('view-report');
+                } else {
+                  setPage('dashboard');
+                }
               }}
               theme={theme}
               toggleTheme={toggleTheme}
@@ -312,9 +321,15 @@ export default function App() {
                 setDraftToEdit(null);
                 setPage('dashboard');
               }}
-              onSaveSuccess={() => {
+              onSaveSuccess={(reportId) => {
                 setDraftToEdit(null);
-                setPage('dashboard');
+                if (reportId) {
+                  setSelectedReportId(reportId);
+                  setAutoPrint(true);
+                  setPage('view-report');
+                } else {
+                  setPage('dashboard');
+                }
               }}
               theme={theme}
               toggleTheme={toggleTheme}

@@ -1,4 +1,5 @@
-const CACHE_NAME = 'agroskan-cache-v10';
+const CACHE_VERSION = '__SW_VERSION__';
+const CACHE_NAME = 'agroskan-cache-' + CACHE_VERSION;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -7,13 +8,22 @@ const ASSETS_TO_CACHE = [
   '/icon-512.png'
 ];
 
+// Listener para forçar ativação imediata sob demanda
+self.addEventListener('message', event => {
+  if (event.data && (event.data.type === 'SKIP_WAITING' || event.data === 'skipWaiting')) {
+    self.skipWaiting();
+  }
+});
+
 // Instalação do Service Worker e caching inicial
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Instalando Service Worker e cacheando estáticos essenciais');
-        return cache.addAll(ASSETS_TO_CACHE);
+        console.log('[SW] Instalando Service Worker v' + CACHE_VERSION);
+        return cache.addAll(ASSETS_TO_CACHE).catch(err => {
+          console.warn('[SW] Aviso: alguns estáticos iniciais falharam ao cachear:', err);
+        });
       })
       .then(() => self.skipWaiting())
   );
@@ -26,7 +36,7 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cache => {
           if (cache !== CACHE_NAME) {
-            console.log('Removendo cache antigo:', cache);
+            console.log('[SW] Removendo cache obsoleto:', cache);
             return caches.delete(cache);
           }
         })
@@ -37,8 +47,14 @@ self.addEventListener('activate', event => {
 
 // Estratégia Network First com Fallback to Cache
 self.addEventListener('fetch', event => {
-  // Ignora requisições de API (que devem ir sempre para a rede) e de extensões
-  if (event.request.url.includes('/api/') || !event.request.url.startsWith(self.location.origin)) {
+  // Ignora requisições de API, Service Worker, version.json e extensões
+  const url = event.request.url;
+  if (
+    url.includes('/api/') || 
+    url.includes('/sw.js') || 
+    url.includes('/version.json') || 
+    !url.startsWith(self.location.origin)
+  ) {
     return;
   }
 

@@ -72,6 +72,110 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
 
+  // Filtros de Piloto para Aba Comissões
+  const [selectedPilotDetailId, setSelectedPilotDetailId] = useState('');
+  const [pilotDateFilter, setPilotDateFilter] = useState('mes_atual');
+  const [pilotStartDate, setPilotStartDate] = useState('');
+  const [pilotEndDate, setPilotEndDate] = useState('');
+
+  // Selecionar primeiro piloto automaticamente quando a lista carregar
+  useEffect(() => {
+    if (pilots.length > 0 && !selectedPilotDetailId) {
+      setSelectedPilotDetailId(String(pilots[0].id));
+    }
+  }, [pilots, selectedPilotDetailId]);
+
+  const selectedPilot = pilots.find(p => String(p.id) === String(selectedPilotDetailId));
+
+  const pilotDetailReports = React.useMemo(() => {
+    if (!selectedPilot) return [];
+
+    let filtered = reports.filter(r => r.pilot_name && r.pilot_name.trim() === selectedPilot.name.trim());
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    const getYearAndMonthLocal = (dateStr) => {
+      const parts = dateStr.split('T')[0].split('-');
+      return {
+        year: parseInt(parts[0], 10),
+        month: parseInt(parts[1], 10) - 1
+      };
+    };
+
+    if (pilotDateFilter === 'mes_atual') {
+      filtered = filtered.filter(r => {
+        if (!r.report_date) return false;
+        const { year, month } = getYearAndMonthLocal(r.report_date);
+        return year === currentYear && month === currentMonth;
+      });
+    } else if (pilotDateFilter === 'mes_passado') {
+      let targetMonth = currentMonth - 1;
+      let targetYear = currentYear;
+      if (targetMonth < 0) {
+        targetMonth = 11;
+        targetYear -= 1;
+      }
+      filtered = filtered.filter(r => {
+        if (!r.report_date) return false;
+        const { year, month } = getYearAndMonthLocal(r.report_date);
+        return year === targetYear && month === targetMonth;
+      });
+    } else if (pilotDateFilter === 'personalizado') {
+      filtered = filtered.filter(r => {
+        if (!r.report_date) return false;
+        const rDateStr = r.report_date.split('T')[0];
+        if (pilotStartDate && rDateStr < pilotStartDate) return false;
+        if (pilotEndDate && rDateStr > pilotEndDate) return false;
+        return true;
+      });
+    }
+
+    return filtered;
+  }, [reports, selectedPilot, pilotDateFilter, pilotStartDate, pilotEndDate]);
+
+  const pilotMetrics = React.useMemo(() => {
+    const totalArea = pilotDetailReports.reduce((sum, r) => sum + (parseFloat(r.total_area) || 0), 0);
+    const totalRevenue = pilotDetailReports.reduce((sum, r) => sum + (parseFloat(r.total_price) || 0), 0);
+    const count = pilotDetailReports.length;
+
+    const salaryBase = selectedPilot ? parseFloat(selectedPilot.salary_base) || 0 : 0;
+    const commissionPerHa = selectedPilot ? parseFloat(selectedPilot.commission_per_ha) || 0 : 0;
+    const commissionPercentage = selectedPilot ? parseFloat(selectedPilot.commission_percentage) || 0 : 0;
+    const commissionType = selectedPilot ? selectedPilot.commission_type : 'commission_per_ha';
+
+    let calculatedCommission = 0;
+    let ruleText = '';
+    let hasSalary = false;
+
+    if (commissionType === 'salary_plus_commission_per_ha') {
+      calculatedCommission = totalArea * commissionPerHa;
+      hasSalary = true;
+      ruleText = `Fixo: R$ ${salaryBase.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} + R$ ${commissionPerHa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/ha`;
+    } else if (commissionType === 'commission_per_ha') {
+      calculatedCommission = totalArea * commissionPerHa;
+      ruleText = `Comissão: R$ ${commissionPerHa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/ha`;
+    } else if (commissionType === 'percentage_revenue') {
+      calculatedCommission = totalRevenue * (commissionPercentage / 100);
+      ruleText = `Comissão: ${commissionPercentage}% do faturamento`;
+    }
+
+    const totalToPay = (hasSalary ? salaryBase : 0) + calculatedCommission;
+
+    return {
+      totalArea,
+      totalRevenue,
+      count,
+      salaryBase,
+      calculatedCommission,
+      totalToPay,
+      ruleText,
+      hasSalary,
+      commissionType
+    };
+  }, [pilotDetailReports, selectedPilot]);
+
   // Clientes únicos extraídos dinamicamente
   const uniqueClients = React.useMemo(() => {
     const clients = reports.map(r => r.client_name ? r.client_name.trim() : '').filter(Boolean);
@@ -910,6 +1014,20 @@ export default function ClientAdmin({ onLogout, onViewReport, onCreateReport, th
           >
             <Users size={18} />
             <span>Gerenciar Pilotos</span>
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('pilots-detail');
+              setMenuOpen(false);
+            }}
+            class={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+              activeTab === 'pilots-detail' 
+                ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/10' 
+                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700/40 dark:hover:text-white'
+            }`}
+          >
+            <DollarSign size={18} />
+            <span>Comissões e Produção</span>
           </button>
           <button
             onClick={() => {

@@ -12,6 +12,7 @@ async function initPg(pool) {
         name TEXT NOT NULL UNIQUE,
         description TEXT,
         max_devices INTEGER DEFAULT 1,
+        max_pilots INTEGER DEFAULT 999,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -22,15 +23,28 @@ async function initPg(pool) {
       ALTER TABLE plans ADD COLUMN IF NOT EXISTS max_devices INTEGER DEFAULT 1;
     `);
 
+    // Executar migração de coluna max_pilots na tabela plans se ela já existe
+    await client.query(`
+      ALTER TABLE plans ADD COLUMN IF NOT EXISTS max_pilots INTEGER DEFAULT 999;
+    `);
+
     // Inicializar planos padrões se a tabela estiver vazia
     const checkPlans = await client.query("SELECT COUNT(*) as count FROM plans");
     if (parseInt(checkPlans.rows[0].count, 10) === 0) {
       await client.query(`
-        INSERT INTO plans (name, description, max_devices) VALUES 
-        ('Básico', 'Até 3 pilotos', 1),
-        ('Pro', 'Ilimitados', 999)
+        INSERT INTO plans (name, description, max_devices, max_pilots) VALUES 
+        ('Básico', '1 Piloto', 1, 1),
+        ('Intermediário', 'Até 3 pilotos', 2, 3),
+        ('Avançado', 'Ilimitados', 999, 999)
       `);
-      console.log('Planos padrões "Básico" e "Pro" criados com sucesso!');
+      console.log('Planos padrões criados com sucesso!');
+    } else {
+      // Sincronizar max_pilots de planos existentes caso estejam nulos ou no padrão inicial
+      await client.query(`
+        UPDATE plans SET max_pilots = 1 WHERE (LOWER(name) LIKE '%básic%' OR LOWER(name) LIKE '%basic%' OR description ILIKE '%1 piloto%') AND (max_pilots IS NULL OR max_pilots = 999);
+        UPDATE plans SET max_pilots = 3 WHERE (LOWER(name) LIKE '%intermediár%' OR LOWER(name) LIKE '%intermediar%' OR description ILIKE '%3 piloto%') AND (max_pilots IS NULL OR max_pilots = 999);
+        UPDATE plans SET max_pilots = 999 WHERE (LOWER(name) LIKE '%avançad%' OR LOWER(name) LIKE '%avancad%' OR LOWER(name) LIKE '%pro%' OR description ILIKE '%ilimitad%');
+      `);
     }
 
     // 1. Tabela de Empresas

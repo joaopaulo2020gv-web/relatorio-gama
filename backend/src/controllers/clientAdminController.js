@@ -131,46 +131,90 @@ exports.createPilot = (req, res) => {
         return res.status(500).json({ error: 'Erro ao verificar plano da empresa.' });
       }
 
-      // Plano Básico limite: 3 pilotos. Se for Pro, ilimitado (ou 50)
-      const limit = row.plan_name === 'Pro' ? 100 : 3;
-      if (row.current_pilots >= limit) {
-        return res.status(400).json({
-          error: `Seu plano atual (${row.plan_name}) permite no máximo ${limit} pilotos. Faça upgrade para cadastrar mais.`
-        });
-      }
+      const planName = (row.plan_name || '').trim();
+      const currentPilots = parseInt(row.current_pilots, 10) || 0;
 
-      // Hash da senha
-      const salt = bcrypt.genSaltSync(10);
-      const hashedPassword = bcrypt.hashSync(password, salt);
+      // Buscar plano correspondente na tabela plans para validar o limite real de pilotos
+      db.get(
+        `SELECT * FROM plans WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))`,
+        [planName],
+        (planErr, planRow) => {
+          let limit = 999;
+          const nameNormalized = planName.toLowerCase();
+          const descNormalized = ((planRow && planRow.description) || '').toLowerCase();
 
-      db.run(
-        `INSERT INTO users (username, password, role, company_id, name, commission_type, salary_base, commission_per_ha, commission_percentage) 
-         VALUES (?, ?, 'pilot', ?, ?, ?, ?, ?, ?)`,
-        [
-          username, 
-          hashedPassword, 
-          companyId, 
-          name, 
-          commission_type || 'commission_per_ha', 
-          parseFloat(salary_base) || 0, 
-          parseFloat(commission_per_ha) || 0, 
-          parseFloat(commission_percentage) || 0
-        ],
-        function (err) {
-          if (err) {
+          if (planRow && planRow.max_pilots !== undefined && planRow.max_pilots !== null && !isNaN(parseInt(planRow.max_pilots, 10))) {
+            limit = parseInt(planRow.max_pilots, 10);
+          } else {
+            // Dedução inteligente se o campo max_pilots não estiver definido
             if (
-              err.message.includes('UNIQUE constraint failed') ||
-              err.message.includes('duplicate key') ||
-              err.message.includes('unique constraint')
+              nameNormalized.includes('avançad') || 
+              nameNormalized.includes('avancad') || 
+              nameNormalized.includes('pro') || 
+              nameNormalized.includes('ilimitad') ||
+              descNormalized.includes('ilimitad')
             ) {
-              return res.status(400).json({ error: 'O nome de usuário já está em uso.' });
+              limit = 999;
+            } else if (
+              nameNormalized.includes('intermediár') || 
+              nameNormalized.includes('intermediar') || 
+              descNormalized.includes('3')
+            ) {
+              limit = 3;
+            } else if (
+              nameNormalized.includes('básic') || 
+              nameNormalized.includes('basic') || 
+              descNormalized.includes('1')
+            ) {
+              limit = 1;
+            } else {
+              limit = 999;
             }
-            return res.status(500).json({ error: 'Erro ao cadastrar piloto.' });
           }
-          return res.status(201).json({
-            message: 'Piloto cadastrado com sucesso!',
-            pilot_id: this.lastID
-          });
+
+          // Se o limite for 0 ou >= 999, o plano é considerado ilimitado
+          const isUnlimited = limit >= 999 || limit <= 0;
+
+          if (!isUnlimited && currentPilots >= limit) {
+            return res.status(400).json({
+              error: `Seu plano atual (${row.plan_name}) permite no máximo ${limit} piloto${limit > 1 ? 's' : ''}. Faça upgrade para cadastrar mais.`
+            });
+          }
+
+          // Hash da senha
+          const salt = bcrypt.genSaltSync(10);
+          const hashedPassword = bcrypt.hashSync(password, salt);
+
+          db.run(
+            `INSERT INTO users (username, password, role, company_id, name, commission_type, salary_base, commission_per_ha, commission_percentage) 
+             VALUES (?, ?, 'pilot', ?, ?, ?, ?, ?, ?)`,
+            [
+              username, 
+              hashedPassword, 
+              companyId, 
+              name, 
+              commission_type || 'commission_per_ha', 
+              parseFloat(salary_base) || 0, 
+              parseFloat(commission_per_ha) || 0, 
+              parseFloat(commission_percentage) || 0
+            ],
+            function (err) {
+              if (err) {
+                if (
+                  err.message.includes('UNIQUE constraint failed') ||
+                  err.message.includes('duplicate key') ||
+                  err.message.includes('unique constraint')
+                ) {
+                  return res.status(400).json({ error: 'O nome de usuário já está em uso.' });
+                }
+                return res.status(500).json({ error: 'Erro ao cadastrar piloto.' });
+              }
+              return res.status(201).json({
+                message: 'Piloto cadastrado com sucesso!',
+                pilot_id: this.lastID
+              });
+            }
+          );
         }
       );
     }

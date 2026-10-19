@@ -31,6 +31,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
   const [planNameInput, setPlanNameInput] = useState('');
   const [planDescriptionInput, setPlanDescriptionInput] = useState('');
   const [planMaxDevicesInput, setPlanMaxDevicesInput] = useState(1);
+  const [planMaxPilotsInput, setPlanMaxPilotsInput] = useState(999);
   const [planCheckoutLinkInput, setPlanCheckoutLinkInput] = useState('');
   const [planFormError, setPlanFormError] = useState('');
   const [planFormSuccess, setPlanFormSuccess] = useState('');
@@ -260,6 +261,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
     setPlanNameInput('');
     setPlanDescriptionInput('');
     setPlanMaxDevicesInput(1);
+    setPlanMaxPilotsInput(999);
     setPlanCheckoutLinkInput('');
     setPlanFormError('');
     setPlanFormSuccess('');
@@ -271,6 +273,11 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
     setPlanNameInput(plan.name);
     setPlanDescriptionInput(plan.description || '');
     setPlanMaxDevicesInput(plan.max_devices || 1);
+    setPlanMaxPilotsInput(
+      plan.max_pilots !== undefined && plan.max_pilots !== null 
+        ? plan.max_pilots 
+        : (plan.name?.toLowerCase().includes('avançad') ? 999 : (plan.name?.toLowerCase().includes('intermediár') ? 3 : 1))
+    );
     setPlanCheckoutLinkInput(plan.checkout_link || '');
     setPlanFormError('');
     setPlanFormSuccess('');
@@ -303,6 +310,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
           name: planNameInput,
           description: planDescriptionInput,
           max_devices: planMaxDevicesInput,
+          max_pilots: planMaxPilotsInput,
           checkout_link: planCheckoutLinkInput
         })
       });
@@ -318,6 +326,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
         setPlanNameInput('');
         setPlanDescriptionInput('');
         setPlanMaxDevicesInput(1);
+        setPlanMaxPilotsInput(999);
         setPlanCheckoutLinkInput('');
       }
 
@@ -649,6 +658,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
                     <tr class="bg-slate-900/50 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-700">
                       <th class="px-6 py-4">Nome do Plano</th>
                       <th class="px-6 py-4">Descrição</th>
+                      <th class="px-6 py-4">Limite de Pilotos</th>
                       <th class="px-6 py-4">Data de Criação</th>
                       <th class="px-6 py-4 text-center">Ações</th>
                     </tr>
@@ -661,6 +671,17 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
                         </td>
                         <td class="px-6 py-4 text-slate-300 font-semibold">
                           {plan.description || 'Sem descrição'}
+                        </td>
+                        <td class="px-6 py-4 text-slate-300 font-semibold">
+                          {plan.max_pilots >= 999 || plan.max_pilots === 0 ? (
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              Ilimitados
+                            </span>
+                          ) : (
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                              Até {plan.max_pilots} piloto{plan.max_pilots > 1 ? 's' : ''}
+                            </span>
+                          )}
                         </td>
                         <td class="px-6 py-4 text-sm font-semibold text-slate-300">
                           {plan.created_at ? new Date(plan.created_at).toLocaleDateString('pt-BR') : 'Sem data'}
@@ -1102,17 +1123,31 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
                     class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                   />
                 </div>
-                <div>
-                  <label class="block text-slate-300 text-xs font-bold mb-1.5">Limite de Dispositivos/Acessos Simultâneos *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={planMaxDevicesInput}
-                    onChange={(e) => setPlanMaxDevicesInput(parseInt(e.target.value, 10) || 1)}
-                    placeholder="Ex: 3"
-                    class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
-                  />
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-slate-300 text-xs font-bold mb-1.5">Dispositivos Simultâneos *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={planMaxDevicesInput}
+                      onChange={(e) => setPlanMaxDevicesInput(parseInt(e.target.value, 10) || 1)}
+                      placeholder="Ex: 3"
+                      class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-slate-300 text-xs font-bold mb-1.5">Limite de Pilotos * (999 = Ilimitado)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={planMaxPilotsInput}
+                      onChange={(e) => setPlanMaxPilotsInput(parseInt(e.target.value, 10) || 1)}
+                      placeholder="Ex: 1, 3 ou 999"
+                      class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label class="block text-slate-300 text-xs font-bold mb-1.5">Link de Checkout de Pagamento (Hotmart/Asaas)</label>

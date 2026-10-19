@@ -228,16 +228,19 @@ exports.listPlans = (req, res) => {
 
 // Criar um novo plano
 exports.createPlan = (req, res) => {
-  const { name, description, max_devices, checkout_link } = req.body;
+  const { name, description, max_devices, max_pilots, checkout_link } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'O nome do plano é obrigatório.' });
   }
 
-  const limit = parseInt(max_devices, 10) || 1;
+  const limitDevices = parseInt(max_devices, 10) || 1;
+  const limitPilots = max_pilots !== undefined && max_pilots !== null && !isNaN(parseInt(max_pilots, 10))
+    ? parseInt(max_pilots, 10)
+    : 999;
 
   db.run(
-    `INSERT INTO plans (name, description, max_devices, checkout_link) VALUES (?, ?, ?, ?)`,
-    [name, description || '', limit, checkout_link || ''],
+    `INSERT INTO plans (name, description, max_devices, max_pilots, checkout_link) VALUES (?, ?, ?, ?, ?)`,
+    [name, description || '', limitDevices, limitPilots, checkout_link || ''],
     function (err) {
       if (err) {
         if (err.message.includes('unique constraint') || err.message.includes('UNIQUE constraint') || err.message.includes('plans_name_key')) {
@@ -253,12 +256,15 @@ exports.createPlan = (req, res) => {
 // Editar um plano existente
 exports.updatePlan = async (req, res) => {
   const { id } = req.params;
-  const { name, description, max_devices, checkout_link } = req.body;
+  const { name, description, max_devices, max_pilots, checkout_link } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'O nome do plano é obrigatório.' });
   }
 
-  const limit = parseInt(max_devices, 10) || 1;
+  const limitDevices = parseInt(max_devices, 10) || 1;
+  const limitPilots = max_pilots !== undefined && max_pilots !== null && !isNaN(parseInt(max_pilots, 10))
+    ? parseInt(max_pilots, 10)
+    : 999;
 
   const client = await db.pool.connect();
   try {
@@ -274,8 +280,8 @@ exports.updatePlan = async (req, res) => {
 
     // Atualizar a tabela de planos
     await client.query(
-      `UPDATE plans SET name = $1, description = $2, max_devices = $3, checkout_link = $4 WHERE id = $5`,
-      [name, description || '', limit, checkout_link || '', id]
+      `UPDATE plans SET name = $1, description = $2, max_devices = $3, max_pilots = $4, checkout_link = $5 WHERE id = $6`,
+      [name, description || '', limitDevices, limitPilots, checkout_link || '', id]
     );
 
     // Se o nome mudou, atualizar a tabela de empresas que usavam este plano

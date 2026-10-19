@@ -175,6 +175,12 @@ async function initPg(pool) {
     await client.query(`
       ALTER TABLE companies ADD COLUMN IF NOT EXISTS subscription_id TEXT;
     `);
+    await client.query(`
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS phone TEXT;
+    `);
+    await client.query(`
+      ALTER TABLE companies ADD COLUMN IF NOT EXISTS referral_code TEXT;
+    `);
     console.log('Colunas de migração de pagamentos e e-mails verificadas/criadas em "users" e "companies".');
 
     // 4. Inserir SuperAdmin padrão se não existir

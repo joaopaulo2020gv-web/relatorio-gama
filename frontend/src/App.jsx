@@ -218,9 +218,23 @@ export default function App() {
     setPage('dashboard');
   };
 
+  const handleExitImpersonation = () => {
+    const superToken = localStorage.getItem('gama_superadmin_token');
+    const superUser = localStorage.getItem('gama_superadmin_user');
+    if (superToken && superUser) {
+      localStorage.setItem('gama_token', superToken);
+      localStorage.setItem('gama_user', superUser);
+      localStorage.removeItem('gama_superadmin_token');
+      localStorage.removeItem('gama_superadmin_user');
+      window.location.reload();
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('gama_token');
     localStorage.removeItem('gama_user');
+    localStorage.removeItem('gama_superadmin_token');
+    localStorage.removeItem('gama_superadmin_user');
     setUser(null);
     setPage('dashboard');
   };
@@ -369,8 +383,24 @@ export default function App() {
     }
   };
 
+  const isImpersonating = !!localStorage.getItem('gama_superadmin_token');
+
   return (
     <>
+      {isImpersonating && (
+        <div className="bg-[#0b1329] border-b border-amber-500/40 px-6 py-2.5 flex items-center justify-between text-xs sticky top-0 z-50 shadow-lg">
+          <div className="flex items-center space-x-2 text-amber-400 font-bold">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+            <span>Acessando como: <strong className="text-white font-extrabold">{user?.company_name || user?.name}</strong></span>
+          </div>
+          <button 
+            onClick={handleExitImpersonation}
+            className="px-4 py-1.5 bg-[#f59e0b] hover:bg-[#d97706] text-slate-950 font-black rounded-lg transition-all shadow-md active:scale-95 text-xs"
+          >
+            Voltar ao Painel Geral
+          </button>
+        </div>
+      )}
       {renderContent()}
 
       {/* Modal de Instalação PWA */}

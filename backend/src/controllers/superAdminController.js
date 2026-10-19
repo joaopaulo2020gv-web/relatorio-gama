@@ -1,5 +1,8 @@
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const db = require('../database/db');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'gama-secret-key-super-safe';
 
 // Listar todas as empresas clientes
 exports.listCompanies = (req, res) => {
@@ -27,6 +30,9 @@ exports.createCompany = async (req, res) => {
   const { 
     name, 
     cnpj, 
+    phone,
+    referral_code,
+    checkout_link,
     plan_name, 
     plan_expires_at, 
     admin_name, 
@@ -47,9 +53,9 @@ exports.createCompany = async (req, res) => {
 
     // 1. Inserir Empresa
     const companyRes = await client.query(
-      `INSERT INTO companies (name, cnpj, plan_name, plan_status, plan_expires_at) 
-       VALUES ($1, $2, $3, 'active', $4) RETURNING id`,
-      [name, cnpj || '', plan_name || 'Básico', plan_expires_at || '']
+      `INSERT INTO companies (name, cnpj, phone, referral_code, checkout_link, plan_name, plan_status, plan_expires_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, 'active', $7) RETURNING id`,
+      [name, cnpj || '', phone || '', referral_code || '', checkout_link || '', plan_name || 'Básico', plan_expires_at || '']
     );
 
     const companyId = companyRes.rows[0].id;
@@ -91,6 +97,9 @@ exports.updateCompany = async (req, res) => {
   const { 
     name, 
     cnpj, 
+    phone,
+    referral_code,
+    checkout_link,
     plan_name, 
     plan_status, 
     plan_expires_at,
@@ -112,9 +121,10 @@ exports.updateCompany = async (req, res) => {
     // 1. Atualizar dados da empresa
     await client.query(
       `UPDATE companies 
-       SET name = $1, cnpj = $2, plan_name = $3, plan_status = $4, plan_expires_at = $5 
-       WHERE id = $6`,
-      [name, cnpj || '', plan_name || 'Básico', plan_status || 'active', plan_expires_at || '', id]
+       SET name = $1, cnpj = $2, plan_name = $3, plan_status = $4, plan_expires_at = $5,
+           phone = $6, referral_code = $7, checkout_link = $8
+       WHERE id = $9`,
+      [name, cnpj || '', plan_name || 'Básico', plan_status || 'active', plan_expires_at || '', phone || '', referral_code || '', checkout_link || '', id]
     );
 
     // 2. Se as informações do administrador principal foram enviadas, atualizamos também
@@ -188,6 +198,58 @@ exports.deleteCompany = (req, res) => {
     }
     return res.json({ message: 'Empresa excluída com sucesso!' });
   });
+};
+
+// Acessar painel como administrador da empresa cliente (Impersonate)
+exports.impersonateCompany = (req, res) => {
+  const { companyId } = req.params;
+
+  db.get(
+    `SELECT u.*, c.name as company_name, c.cnpj, c.logo_url 
+     FROM users u
+     JOIN companies c ON u.company_id = c.id
+     WHERE u.company_id = ? AND u.role = 'admin'
+     LIMIT 1`,
+    [companyId],
+    (err, user) => {
+      if (err) {
+        return res.status(500).json({ error: 'Erro ao buscar dados do administrador da empresa.' });
+      }
+      if (!user) {
+        return res.status(404).json({ error: 'Nenhum administrador encontrado para esta empresa.' });
+      }
+
+      const token = jwt.sign(
+        { 
+          id: user.id, 
+          username: user.username, 
+          role: user.role, 
+          company_id: user.company_id,
+          name: user.name,
+          company_name: user.company_name,
+          cnpj: user.cnpj,
+          impersonated: true 
+        },
+        JWT_SECRET,
+        { expiresIn: '1d' }
+      );
+
+      return res.json({
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          company_id: user.company_id,
+          name: user.name,
+          company_name: user.company_name,
+          cnpj: user.cnpj,
+          logo_url: user.logo_url,
+          impersonated: true
+        }
+      });
+    }
+  );
 };
 
 // Estatísticas globais do sistema

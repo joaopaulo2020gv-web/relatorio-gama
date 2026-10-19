@@ -96,6 +96,11 @@ app.delete('/api/super/companies/:id',
   auth.requireSuperAdmin, 
   superAdminController.deleteCompany
 );
+app.post('/api/super/impersonate/:companyId', 
+  auth.authenticateToken, 
+  auth.requireSuperAdmin, 
+  superAdminController.impersonateCompany
+);
 app.get('/api/super/stats', 
   auth.authenticateToken, 
   auth.requireSuperAdmin, 

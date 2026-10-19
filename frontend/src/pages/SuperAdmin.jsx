@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Plus, ShieldCheck, Landmark, Users, FileText, ToggleLeft, ToggleRight, Trash2, Pencil, CreditCard, Sun, Moon, Download } from 'lucide-react';
+import { LogOut, Plus, ShieldCheck, Landmark, Users, FileText, ToggleLeft, ToggleRight, Trash2, Pencil, CreditCard, Sun, Moon, Download, LogIn } from 'lucide-react';
 import { triggerHaptic } from '../utils/haptic';
 
 export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOption, onTriggerInstall }) {
@@ -16,6 +16,9 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
   // Campos do formulário de nova empresa
   const [name, setName] = useState('');
   const [cnpj, setCnpj] = useState('');
+  const [phone, setPhone] = useState('');
+  const [referralCode, setReferralCode] = useState('');
+  const [checkoutLink, setCheckoutLink] = useState('');
   const [planName, setPlanName] = useState('Básico');
   const [planExpiresAt, setPlanExpiresAt] = useState('');
   const [adminName, setAdminName] = useState('');
@@ -93,6 +96,9 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
     setEditingCompany(null);
     setName('');
     setCnpj('');
+    setPhone('');
+    setReferralCode('');
+    setCheckoutLink('');
     setPlanName(plans[0]?.name || 'Básico');
     setPlanExpiresAt('');
     setAdminName('');
@@ -108,6 +114,9 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
     setEditingCompany(company);
     setName(company.name);
     setCnpj(company.cnpj || '');
+    setPhone(company.phone || '');
+    setReferralCode(company.referral_code || '');
+    setCheckoutLink(company.checkout_link || '');
     setPlanName(company.plan_name || 'Básico');
     setAdminName(company.admin_name || '');
     setAdminUsername(company.admin_username || '');
@@ -126,6 +135,34 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
     setFormError('');
     setFormSuccess('');
     setModalOpen(true);
+  };
+
+  const handleImpersonate = async (company) => {
+    triggerHaptic(15);
+    try {
+      const response = await fetch(`/api/super/impersonate/${company.id}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('gama_token')}`
+        }
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || 'Erro ao acessar conta da empresa.');
+        return;
+      }
+      
+      localStorage.setItem('gama_superadmin_token', localStorage.getItem('gama_token'));
+      localStorage.setItem('gama_superadmin_user', localStorage.getItem('gama_user'));
+      
+      localStorage.setItem('gama_token', data.token);
+      localStorage.setItem('gama_user', JSON.stringify(data.user));
+      
+      window.location.reload();
+    } catch (err) {
+      console.error('Erro ao acessar como empresa:', err);
+      alert('Erro de conexão ao acessar conta da empresa.');
+    }
   };
 
   const handleSaveCompany = async (e) => {
@@ -158,6 +195,9 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
         ? {
             name,
             cnpj,
+            phone,
+            referral_code: referralCode,
+            checkout_link: checkoutLink,
             plan_name: planName,
             plan_expires_at: planExpiresAt,
             plan_status: editingCompany.plan_status,
@@ -169,6 +209,9 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
         : {
             name,
             cnpj,
+            phone,
+            referral_code: referralCode,
+            checkout_link: checkoutLink,
             plan_name: planName,
             plan_expires_at: planExpiresAt,
             admin_name: adminName,
@@ -196,6 +239,9 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
       if (!editingCompany) {
         setName('');
         setCnpj('');
+        setPhone('');
+        setReferralCode('');
+        setCheckoutLink('');
         setPlanName('Básico');
         setPlanExpiresAt('');
         setAdminName('');
@@ -562,6 +608,7 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
                     <tr class="bg-slate-900/50 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-700">
                       <th class="px-6 py-4">Empresa / CNPJ</th>
                       <th class="px-6 py-4">Plano</th>
+                      <th class="px-6 py-4">Slug / Indicação</th>
                       <th class="px-6 py-4">Vencimento</th>
                       <th class="px-6 py-4">Pilotos</th>
                       <th class="px-6 py-4">Relatórios</th>
@@ -575,9 +622,26 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
                         <td class="px-6 py-4">
                           <div class="font-bold text-slate-800 dark:text-white">{company.name}</div>
                           <div class="text-xs text-slate-400 font-semibold">{company.cnpj || 'CNPJ não informado'}</div>
+                          {company.phone && (
+                            <div class="flex items-center space-x-1.5 mt-1 text-xs">
+                              <span class="text-slate-400 font-semibold">WhatsApp: <strong class="text-slate-200">{company.phone}</strong></span>
+                              <a 
+                                href={`https://wa.me/55${company.phone.replace(/\D/g, '')}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                class="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold text-[10px] hover:bg-emerald-500/30 transition-colors"
+                              >
+                                WhatsApp
+                              </a>
+                            </div>
+                          )}
                         </td>
                         <td class="px-6 py-4 font-semibold text-slate-300">
                           {company.plan_name}
+                        </td>
+                        <td class="px-6 py-4 text-xs">
+                          <div class="text-emerald-400 font-mono font-bold">{company.referral_code || '-'}</div>
+                          <div class="text-slate-400 text-[11px] font-semibold">{company.referred_by_name ? `Indicado por: ${company.referred_by_name}` : 'Nenhuma indicação'}</div>
                         </td>
                         <td class="px-6 py-4 text-sm font-semibold text-slate-300">
                           {company.plan_expires_at ? new Date(company.plan_expires_at).toLocaleDateString('pt-BR') : 'Sem data'}
@@ -598,7 +662,14 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
                           </span>
                         </td>
                         <td class="px-6 py-4">
-                          <div class="flex items-center justify-center space-x-3">
+                          <div class="flex items-center justify-center space-x-2">
+                            <button
+                              onClick={() => handleImpersonate(company)}
+                              title="Acessar como Administrador da Empresa"
+                              class="p-2 bg-slate-700/50 hover:bg-emerald-500/20 hover:text-emerald-400 border border-slate-600/50 hover:border-emerald-500/30 text-slate-300 rounded-xl transition-all duration-200"
+                            >
+                              <LogIn size={18} />
+                            </button>
                             <button
                               onClick={() => openEditModal(company)}
                               title="Editar Empresa"
@@ -973,6 +1044,16 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
                       class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                     />
                   </div>
+                  <div>
+                    <label class="block text-slate-300 text-xs font-bold mb-1.5">Telefone / WhatsApp</label>
+                    <input
+                      type="text"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Ex: 3197964763"
+                      class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                    />
+                  </div>
                   <div class="grid grid-cols-2 gap-4">
                     <div>
                       <label class="block text-slate-300 text-xs font-bold mb-1.5">Plano</label>
@@ -1000,6 +1081,26 @@ export default function SuperAdmin({ onLogout, theme, toggleTheme, showInstallOp
                         class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                       />
                     </div>
+                  </div>
+                  <div>
+                    <label class="block text-slate-300 text-xs font-bold mb-1.5">Código / Slug de Indicação</label>
+                    <input
+                      type="text"
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value)}
+                      placeholder="Ex: minha-empresa-a123"
+                      class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-slate-300 text-xs font-bold mb-1.5">Link do Pop-up de Vencimento (Checkout)</label>
+                    <input
+                      type="text"
+                      value={checkoutLink}
+                      onChange={(e) => setCheckoutLink(e.target.value)}
+                      placeholder="Ex: https://pay.hotmart.com/... ou https://..."
+                      class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                    />
                   </div>
                 </div>
 

@@ -397,10 +397,19 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
 
   const clientNameRef = React.useRef(null);
   const clientEmailRef = React.useRef(null);
+  const clientPhoneRef = React.useRef(null);
   const clientDocumentRef = React.useRef(null);
   const farmAddressRef = React.useRef(null);
   const farmNameRef = React.useRef(null);
   const cultureRef = React.useRef(null);
+
+  const formatPhone = (val) => {
+    const nums = val.replace(/\D/g, '').substring(0, 11);
+    if (nums.length <= 2) return nums;
+    if (nums.length <= 6) return `(${nums.substring(0, 2)}) ${nums.substring(2)}`;
+    if (nums.length <= 10) return `(${nums.substring(0, 2)}) ${nums.substring(2, 6)}-${nums.substring(6)}`;
+    return `(${nums.substring(0, 2)}) ${nums.substring(2, 7)}-${nums.substring(7, 11)}`;
+  };
 
   const formatCPFOrCNPJ = (val) => {
     const nums = val.replace(/\D/g, '').substring(0, 14);
@@ -443,6 +452,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
   // ==========================================
   const [draftId, setDraftId] = useState(initialData?.id || null);
   const [clientName, setClientName] = useState(initialData?.client_name || '');
+  const [clientPhone, setClientPhone] = useState(initialData?.client_phone || '');
   const [clientEmail, setClientEmail] = useState(initialData?.client_email || '');
   const [clientDocument, setClientDocument] = useState(initialData?.client_document || '');
   const [farmAddress, setFarmAddress] = useState(initialData?.farm_address || '');
@@ -798,6 +808,7 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
       client_name: clientName,
       farm_name: farmName,
       client_email: clientEmail,
+      client_phone: clientPhone,
       client_document: clientDocument,
       farm_address: farmAddress,
       culture,
@@ -964,11 +975,26 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
                   required
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
-                  onKeyDown={(e) => handleKeyDownNext(e, clientEmailRef)}
+                  onKeyDown={(e) => handleKeyDownNext(e, clientPhoneRef)}
                   placeholder="Ex: Produtor Exemplo"
                   class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                 />
               </div>
+              <div>
+                <label class="block text-slate-300 text-xs font-bold mb-1.5">WhatsApp / Celular do Cliente (Opcional)</label>
+                <input
+                  ref={clientPhoneRef}
+                  type="tel"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(formatPhone(e.target.value))}
+                  onKeyDown={(e) => handleKeyDownNext(e, clientEmailRef)}
+                  placeholder="Ex: (31) 99999-9999"
+                  class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label class="block text-slate-300 text-xs font-bold mb-1.5">E-mail do Cliente (Opcional)</label>
                 <input
@@ -978,6 +1004,19 @@ export default function ReportWizard({ initialData, onCancel, onSaveSuccess, the
                   onChange={(e) => setClientEmail(e.target.value)}
                   onKeyDown={(e) => handleKeyDownNext(e, clientDocumentRef)}
                   placeholder="Ex: cliente@email.com"
+                  class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
+                />
+              </div>
+              <div>
+                <label class="block text-slate-300 text-xs font-bold mb-1.5">CPF ou CNPJ do Cliente (Opcional)</label>
+                <input
+                  ref={clientDocumentRef}
+                  type="text"
+                  inputmode="numeric"
+                  value={clientDocument}
+                  onChange={(e) => setClientDocument(formatCPFOrCNPJ(e.target.value))}
+                  onKeyDown={(e) => handleKeyDownNext(e, farmAddressRef)}
+                  placeholder="Ex: 000.000.000-00 ou 00.000.000/0000-00"
                   class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-primary-500 transition-all font-medium text-sm"
                 />
               </div>

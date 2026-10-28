@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, ArrowLeft, Sun, Moon, Share2 } from 'lucide-react';
+import { Printer, ArrowLeft, Sun, Moon, Share2, CheckCircle2, X, Copy, Check, FileText } from 'lucide-react';
+
+const WhatsAppIcon = ({ size = 18, className = "" }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="currentColor" 
+    className={className}
+  >
+    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2M12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.8 13.47 3.8 11.91C3.81 7.37 7.5 3.67 12.05 3.67M9.11 7.14C8.94 7.14 8.66 7.21 8.42 7.47C8.18 7.73 7.5 8.37 7.5 9.68C7.5 10.99 8.45 12.25 8.58 12.43C8.72 12.6 10.45 15.28 13.15 16.44C15.4 17.41 15.86 17.21 16.34 17.17C16.82 17.13 17.89 16.54 18.11 15.92C18.33 15.3 18.33 14.77 18.26 14.66C18.2 14.55 18.02 14.49 17.75 14.35C17.48 14.22 16.14 13.56 15.89 13.47C15.64 13.38 15.46 13.33 15.28 13.6C15.1 13.87 14.59 14.49 14.43 14.66C14.27 14.84 14.12 14.86 13.84 14.73C13.57 14.59 12.69 14.3 11.64 13.37C10.82 12.64 10.27 11.74 10.11 11.47C9.95 11.2 10.09 11.05 10.23 10.92C10.35 10.8 10.5 10.6 10.64 10.44C10.78 10.27 10.82 10.16 10.91 9.98C11 9.8 10.95 9.64 10.89 9.53C10.82 9.42 10.3 8.13 10.07 7.62C9.86 7.12 9.64 7.19 9.48 7.18C9.32 7.18 9.14 7.14 9.11 7.14Z"/>
+  </svg>
+);
 
 const ReportViewSkeleton = () => (
   <div class="max-w-4xl mx-auto p-6 space-y-8 animate-pulse no-print">
@@ -25,6 +37,19 @@ const ReportViewSkeleton = () => (
 export default function ReportView({ reportId, onBack, theme, toggleTheme, autoPrint }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const formatPhone = (val) => {
+    if (!val) return '';
+    const nums = val.replace(/\D/g, '').substring(0, 11);
+    if (nums.length <= 2) return nums;
+    if (nums.length <= 6) return `(${nums.substring(0, 2)}) ${nums.substring(2)}`;
+    if (nums.length <= 10) return `(${nums.substring(0, 2)}) ${nums.substring(2, 6)}-${nums.substring(6)}`;
+    return `(${nums.substring(0, 2)}) ${nums.substring(2, 7)}-${nums.substring(7, 11)}`;
+  };
+
 
   useEffect(() => {
     const fetchReportDetails = async () => {
@@ -35,6 +60,9 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme, autoP
         const data = await response.json();
         if (response.ok) {
           setReport(data.report);
+          if (data.report.client_phone) {
+            setWhatsappNumber(data.report.client_phone);
+          }
         }
       } catch (err) {
         console.error(err);
@@ -534,6 +562,144 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme, autoP
         </div>
 
       </div>
+    
+      {/* ==========================================
+         MODAL PÓS-GERAÇÃO: WHATSAPP / PDF
+         ========================================== */}
+      {showSuccessModal && (
+        <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto no-print animate-fade-in">
+          <div class="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-700/80 max-w-lg w-full rounded-3xl p-6 sm:p-8 shadow-2xl relative text-left transition-all">
+            {/* Botão fechar */}
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              class="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Fechar"
+            >
+              <X size={18} />
+            </button>
+
+            {/* Cabeçalho de Sucesso */}
+            <div class="flex items-center space-x-3 mb-5">
+              <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 size={28} />
+              </div>
+              <div>
+                <h3 class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white leading-tight">
+                  Relatório Gerado com Sucesso!
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  RTP Nº {report.id}/{printYear} • Fazenda {report.farm_name} ({report.client_name})
+                </p>
+              </div>
+            </div>
+
+            <p class="text-xs text-slate-600 dark:text-slate-300 mb-5">
+              Escolha abaixo como deseja enviar ou exportar o relatório:
+            </p>
+
+            <div class="space-y-4">
+              {/* Opção 1: WhatsApp */}
+              <div class="p-4 sm:p-5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center space-x-2">
+                    <span class="w-7 h-7 rounded-lg bg-[#25D366] text-white flex items-center justify-center shadow-xs">
+                      <WhatsAppIcon size={16} />
+                    </span>
+                    <span class="text-sm font-bold text-slate-900 dark:text-white">Enviar para o WhatsApp</span>
+                  </div>
+                  {navigator.share && (
+                    <button
+                      onClick={handleNativeShare}
+                      type="button"
+                      class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Share2 size={12} />
+                      Compartilhar no Celular
+                    </button>
+                  )}
+                </div>
+
+                <div class="space-y-2.5">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                      WhatsApp do Cliente (com DDD):
+                    </label>
+                    <input
+                      type="tel"
+                      value={whatsappNumber}
+                      onChange={(e) => setWhatsappNumber(formatPhone(e.target.value))}
+                      placeholder="Ex: (31) 99999-9999 (opcional)"
+                      class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white text-xs font-medium focus:border-emerald-500 transition-all placeholder:text-slate-400"
+                    />
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                      {whatsappNumber ? 'A conversa será aberta diretamente com este número.' : 'Se deixar em branco, o WhatsApp abrirá para você selecionar o contato.'}
+                    </p>
+                  </div>
+
+                  <div class="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={handleSendWhatsApp}
+                      class="flex-1 bg-[#25D366] hover:bg-[#20ba5a] text-white py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+                    >
+                      <WhatsAppIcon size={16} />
+                      <span>Abrir no WhatsApp</span>
+                    </button>
+
+                    <button
+                      onClick={handleCopyMessage}
+                      type="button"
+                      class="px-3.5 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                      title="Copiar mensagem do relatório"
+                    >
+                      {copied ? <Check size={14} class="text-emerald-500" /> : <Copy size={14} />}
+                      <span class="hidden sm:inline">{copied ? 'Copiado!' : 'Copiar'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Opção 2: Exportar PDF / Imprimir */}
+              <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="flex items-center space-x-2">
+                    <FileText size={16} class="text-primary-500 flex-shrink-0" />
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">Exportar PDF / Imprimir</span>
+                  </div>
+                  <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Gera a folha oficial completa A4 para download ou impressão.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => window.print()}
+                  class="flex-shrink-0 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <Printer size={13} />
+                  <span>Gerar PDF</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Rodapé */}
+            <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+              <button
+                onClick={onBack}
+                class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white font-semibold transition-colors cursor-pointer"
+              >
+                Voltar ao Painel
+              </button>
+
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-bold transition-colors cursor-pointer"
+              >
+                Ver Relatório Completo →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

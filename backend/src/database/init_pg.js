@@ -143,6 +143,9 @@ async function initPg(pool) {
     await client.query(`
       ALTER TABLE reports ADD COLUMN IF NOT EXISTS weather_forecast TEXT;
     `);
+    await client.query(`
+      ALTER TABLE reports ADD COLUMN IF NOT EXISTS client_phone TEXT;
+    `);
     console.log('Colunas opcionais de migração (client_email, client_document, farm_address, pilot_signature, client_signature, weather_forecast) verificadas/criadas na tabela "reports".');
 
     // Migrações para suporte a pagamentos e e-mails de domínio próprio

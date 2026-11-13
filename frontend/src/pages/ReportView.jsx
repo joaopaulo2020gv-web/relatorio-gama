@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, ArrowLeft, Sun, Moon, Share2, CheckCircle2, X, Copy, Check, FileText } from 'lucide-react';
+import { Printer, ArrowLeft, Sun, Moon, Share2, CheckCircle2, X, Copy, Check, FileText, Loader2, Download } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 
 const WhatsAppIcon = ({ size = 18, className = "" }) => (
   <svg 
@@ -40,6 +41,8 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme, autoP
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [copied, setCopied] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [pdfProgressText, setPdfProgressText] = useState('');
 
   const formatPhone = (val) => {
     if (!val) return '';
@@ -94,25 +97,132 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme, autoP
   const printYear = new Date(report.report_date).getFullYear();
   const pilotResponsible = report.pilot_name;
 
-  const handleShareReport = async () => {
-    const shareText = `Olá! Segue o Relatório de Pulverização Agrícola RTP ${report.id}/${printYear} da Fazenda ${report.farm_name} (Cliente: ${report.client_name}), gerado pelo AgroSkan.`;
-    const shareUrl = window.location.href;
+  const generateWhatsAppMessage = () => {
+    if (!report) return '';
+    const dateFormatted = report.report_date 
+      ? new Date(report.report_date).toLocaleDateString('pt-BR') 
+      : '';
+    const year = report.report_date ? new Date(report.report_date).getFullYear() : new Date().getFullYear();
+    
+    let msg = `🌾 *RELATÓRIO TÉCNICO DE PULVERIZAÇÃO (RTP)*\n`;
+    msg += `📋 *RTP Nº:* ${report.id}/${year}\n`;
+    if (dateFormatted) msg += `📅 *Data da Aplicação:* ${dateFormatted}\n`;
+    msg += `\n`;
+    msg += `👤 *Cliente:* ${report.client_name}\n`;
+    msg += `🏡 *Fazenda:* ${report.farm_name}\n`;
+    msg += `🌱 *Cultura:* ${report.culture}\n`;
+    if (report.total_area) msg += `📍 *Área Aplicada:* ${Number(report.total_area).toLocaleString('pt-BR')} ha\n`;
+    if (report.pilot_name) msg += `👨‍✈️ *Piloto Responsável:* ${report.pilot_name}\n`;
+    if (report.company_name) msg += `🏢 *Empresa:* ${report.company_name}\n`;
+    
+    if (report.weather_temp || report.weather_humidity || report.delta_t) {
+      msg += `\n⛅ *Condições Climáticas:*\n`;
+      if (report.weather_temp) msg += `• Temperatura: ${report.weather_temp}°C\n`;
+      if (report.weather_humidity) msg += `• Umidade: ${report.weather_humidity}%\n`;
+      if (report.delta_t) msg += `• Delta T: ${report.delta_t}°C\n`;
+    }
+    
+    if (report.observations && report.observations.trim()) {
+      msg += `\n📝 *Observações:* ${report.observations.trim()}\n`;
+    }
+    
+    msg += `\n✅ *Aplicação finalizada com sucesso! O relatório completo em PDF foi gerado pelo sistema AgroSkan.*\n`;
+    return msg;
+  };
 
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Relatório AgroSkan - RTP ${report.id}/${printYear}`,
-          text: shareText,
-          url: shareUrl
-        });
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.error('Erro ao compartilhar:', err);
-        }
-      }
+  const handleSendWhatsApp = () => {
+    const message = generateWhatsAppMessage();
+    const encoded = encodeURIComponent(message);
+    const cleanPhone = (whatsappNumber || '').replace(/\D/g, '');
+    
+    let url = '';
+    if (cleanPhone) {
+      const fullNumber = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
+      url = `https://wa.me/${fullNumber}?text=${encoded}`;
     } else {
-      const formattedText = encodeURIComponent(`${shareText}\n\nConfira os detalhes no link abaixo:\n${shareUrl}`);
-      window.open(`https://api.whatsapp.com/send?text=${formattedText}`, '_blank');
+      url = `https://api.whatsapp.com/send?text=${encoded}`;
+    }
+    window.open(url, '_blank');
+  };
+
+  const handleCopyMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(generateWhatsAppMessage());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Erro ao copiar:', err);
+    }
+  };
+
+  const handleSharePdf = async () => {
+    if (!report || generatingPdf) return;
+    setGeneratingPdf(true);
+    setPdfProgressText('Gerando arquivo PDF...');
+
+    try {
+      const element = document.querySelector('.print-container');
+      if (!element) {
+        throw new Error('Elemento do relatório não encontrado.');
+      }
+
+      const safeFarm = (report.farm_name || 'AgroSkan').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filename = `Relatorio-RTP-${report.id}-${safeFarm}.pdf`;
+
+      const opt = {
+        margin: [6, 6, 6, 6],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          scrollY: 0,
+          windowWidth: 794
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait'
+        },
+        pagebreak: {
+          mode: ['css', 'legacy'],
+          before: '.page-break-before'
+        }
+      };
+
+      setPdfProgressText('Renderizando páginas...');
+      const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+      const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+      // Se o navegador suportar compartilhamento de arquivos nativo (celular / PWA)
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        setPdfProgressText('Abrindo compartilhamento...');
+        await navigator.share({
+          files: [pdfFile],
+          title: `Relatório AgroSkan - RTP ${report.id}/${printYear}`,
+          text: `Olá! Segue o arquivo PDF do Relatório Técnico de Pulverização RTP ${report.id}/${printYear} da Fazenda ${report.farm_name}.`
+        });
+      } else {
+        // Fallback: Baixa o PDF diretamente no aparelho/computador
+        setPdfProgressText('Baixando PDF...');
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error('Erro ao gerar/compartilhar PDF:', err);
+        alert('Não foi possível compartilhar o arquivo PDF diretamente. Você pode usar a opção de impressão para salvar em PDF.');
+      }
+    } finally {
+      setGeneratingPdf(false);
+      setPdfProgressText('');
     }
   };
 
@@ -143,11 +253,23 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme, autoP
         
         <div class="flex items-center space-x-1.5 flex-shrink-0">
           <button
-            onClick={handleShareReport}
-            class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg shadow-emerald-500/10 transition-all cursor-pointer"
+            onClick={handleSharePdf}
+            disabled={generatingPdf}
+            class="flex items-center space-x-1.5 bg-[#25D366] hover:bg-[#20ba5a] text-white px-3.5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-75 disabled:cursor-wait"
+            title="Compartilhar arquivo PDF"
           >
-            <Share2 size={14} />
-            <span class="hidden sm:inline">Compartilhar</span>
+            {generatingPdf ? (
+              <>
+                <Loader2 size={14} class="animate-spin" />
+                <span>Gerando PDF...</span>
+              </>
+            ) : (
+              <>
+                <Share2 size={14} />
+                <span class="hidden sm:inline">Compartilhar PDF</span>
+                <span class="sm:hidden">Compartilhar PDF</span>
+              </>
+            )}
           </button>
           
           <button
@@ -155,8 +277,8 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme, autoP
             class="flex items-center space-x-1.5 bg-gradient-to-r from-primary-600 to-emerald-500 hover:from-primary-500 hover:to-emerald-400 text-white px-3.5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg shadow-primary-500/10 transition-all cursor-pointer"
           >
             <Printer size={14} />
-            <span class="hidden sm:inline">Exportar PDF / Imprimir</span>
-            <span class="sm:hidden">PDF / Imprimir</span>
+            <span class="hidden sm:inline">Exportar / Imprimir</span>
+            <span class="sm:hidden">Imprimir</span>
           </button>
         </div>
       </div>
@@ -598,25 +720,42 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme, autoP
             </p>
 
             <div class="space-y-4">
-              {/* Opção 1: WhatsApp */}
-              <div class="p-4 sm:p-5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20">
-                <div class="flex items-center justify-between mb-3">
-                  <div class="flex items-center space-x-2">
-                    <span class="w-7 h-7 rounded-lg bg-[#25D366] text-white flex items-center justify-center shadow-xs">
-                      <WhatsAppIcon size={16} />
-                    </span>
-                    <span class="text-sm font-bold text-slate-900 dark:text-white">Enviar para o WhatsApp</span>
+              {/* Opção 1: Compartilhar Arquivo PDF no WhatsApp / Celular */}
+              <div class="p-4 sm:p-5 rounded-2xl bg-emerald-500/10 dark:bg-emerald-950/30 border-2 border-emerald-500/30">
+                <div class="flex items-center space-x-3 mb-3">
+                  <span class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs flex-shrink-0">
+                    <FileText size={20} />
+                  </span>
+                  <div>
+                    <span class="text-sm font-extrabold text-slate-900 dark:text-white block">Compartilhar Arquivo PDF</span>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400">Envia o documento PDF real para o WhatsApp ou outro app</p>
                   </div>
-                  {navigator.share && (
-                    <button
-                      onClick={handleNativeShare}
-                      type="button"
-                      class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <Share2 size={12} />
-                      Compartilhar no Celular
-                    </button>
+                </div>
+
+                <button
+                  onClick={handleSharePdf}
+                  disabled={generatingPdf}
+                  class="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white py-3 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-75 disabled:cursor-wait"
+                >
+                  {generatingPdf ? (
+                    <>
+                      <Loader2 size={16} class="animate-spin" />
+                      <span>{pdfProgressText || 'Gerando arquivo PDF...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 size={16} />
+                      <span>Compartilhar PDF no WhatsApp / Celular</span>
+                    </>
                   )}
+                </button>
+              </div>
+
+              {/* Opção 2: Enviar Resumo em Texto no WhatsApp */}
+              <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/60">
+                <div class="flex items-center space-x-2 mb-2.5">
+                  <WhatsAppIcon size={16} className="text-[#25D366]" />
+                  <span class="text-xs font-bold text-slate-800 dark:text-white">Ou Enviar Resumo Técnico em Texto</span>
                 </div>
 
                 <div class="space-y-2.5">
@@ -639,10 +778,10 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme, autoP
                   <div class="flex items-center gap-2 pt-1">
                     <button
                       onClick={handleSendWhatsApp}
-                      class="flex-1 bg-[#25D366] hover:bg-[#20ba5a] text-white py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+                      class="flex-1 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
                     >
-                      <WhatsAppIcon size={16} />
-                      <span>Abrir no WhatsApp</span>
+                      <WhatsAppIcon size={15} />
+                      <span>Abrir Texto no WhatsApp</span>
                     </button>
 
                     <button
@@ -658,15 +797,15 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme, autoP
                 </div>
               </div>
 
-              {/* Opção 2: Exportar PDF / Imprimir */}
+              {/* Opção 3: Exportar PDF / Imprimir */}
               <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between gap-3">
                 <div class="min-w-0">
                   <div class="flex items-center space-x-2">
-                    <FileText size={16} class="text-primary-500 flex-shrink-0" />
+                    <Printer size={16} class="text-primary-500 flex-shrink-0" />
                     <span class="text-xs font-bold text-slate-800 dark:text-white">Exportar PDF / Imprimir</span>
                   </div>
                   <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Gera a folha oficial completa A4 para download ou impressão.
+                    Gera a folha oficial completa A4 para download ou impressão física.
                   </p>
                 </div>
 
@@ -675,7 +814,7 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme, autoP
                   class="flex-shrink-0 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
                 >
                   <Printer size={13} />
-                  <span>Gerar PDF</span>
+                  <span>Imprimir</span>
                 </button>
               </div>
             </div>
@@ -695,6 +834,22 @@ export default function ReportView({ reportId, onBack, theme, toggleTheme, autoP
               >
                 Ver Relatório Completo →
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    
+      {/* Overlay de carregamento ao gerar PDF */}
+      {generatingPdf && (
+        <div class="fixed inset-0 z-60 bg-slate-950/75 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-white animate-fade-in no-print">
+          <div class="bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-700 p-6 sm:p-8 rounded-3xl flex flex-col items-center space-y-4 max-w-sm w-full text-center shadow-2xl text-slate-800 dark:text-white">
+            <div class="w-16 h-16 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <Loader2 size={36} class="animate-spin" />
+            </div>
+            <div>
+              <h4 class="text-base font-extrabold">{pdfProgressText || 'Gerando arquivo PDF...'}</h4>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Preparando o arquivo oficial A4 para compartilhamento...</p>
             </div>
           </div>
         </div>

@@ -12,14 +12,16 @@ exports.login = (req, res) => {
     return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
   }
 
-  // Buscar usuário no banco junto com o limite de conexões do plano da empresa
+  const cleanUsername = username.trim();
+
+  // Buscar usuário no banco junto com o limite de conexões do plano da empresa (insensível a maiúsculas/minúsculas e espaços)
   db.get(
     `SELECT u.*, c.name as company_name, c.cnpj, c.plan_status, c.logo_url, p.max_devices 
      FROM users u 
      LEFT JOIN companies c ON u.company_id = c.id 
      LEFT JOIN plans p ON c.plan_name = p.name
-     WHERE u.username = ?`,
-    [username],
+     WHERE LOWER(TRIM(u.username)) = LOWER(TRIM(?))`,
+    [cleanUsername],
     (err, user) => {
       if (err) {
         return res.status(500).json({ error: 'Erro interno do servidor.' });
@@ -216,7 +218,7 @@ exports.register = async (req, res) => {
     await client.query(
       `INSERT INTO users (username, password, role, company_id, name, email) 
        VALUES ($1, $2, 'admin', $3, $4, $5)`,
-      [adminUsername, hashedPassword, companyId, adminName, adminEmail.trim().toLowerCase()]
+      [adminUsername.trim().toLowerCase(), hashedPassword, companyId, adminName, adminEmail.trim().toLowerCase()]
     );
 
     await client.query("COMMIT");

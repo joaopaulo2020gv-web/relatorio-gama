@@ -69,7 +69,9 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!username || !password) {
+    const cleanUsername = username.trim().toLowerCase();
+
+    if (!cleanUsername || !password) {
       setError('Por favor, preencha todos os campos.');
       return;
     }
@@ -82,7 +84,7 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: cleanUsername, password }),
       });
 
       const data = await response.json();
@@ -96,7 +98,7 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
       localStorage.setItem('gama_user', JSON.stringify(data.user));
 
       if (rememberMe) {
-        localStorage.setItem('gama_remember_username', username);
+        localStorage.setItem('gama_remember_username', cleanUsername);
         localStorage.setItem('gama_remember_password', password);
         localStorage.setItem('gama_remember_me', 'true');
       } else {
@@ -139,11 +141,11 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          companyName: regCompanyName,
-          cnpj: regCnpj,
-          adminName: regAdminName,
-          adminEmail: regAdminEmail,
-          adminUsername: regAdminUsername,
+          companyName: regCompanyName.trim(),
+          cnpj: regCnpj.trim(),
+          adminName: regAdminName.trim(),
+          adminEmail: regAdminEmail.trim().toLowerCase(),
+          adminUsername: regAdminUsername.trim().toLowerCase(),
           adminPassword: regAdminPassword
         }),
       });
@@ -233,6 +235,9 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
                 name="username"
                 type="text"
                 autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Digite seu usuário"
@@ -375,6 +380,9 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
               <input
                 id="regAdminUsername"
                 type="text"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
                 value={regAdminUsername}
                 onChange={(e) => setRegAdminUsername(e.target.value)}
                 placeholder="Ex: joao_agro"

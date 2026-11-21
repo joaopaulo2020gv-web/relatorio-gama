@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const db = require('../database/db');
+const emailService = require('../services/emailService');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'gama_super_secret_jwt_key_2026_drones';
@@ -239,4 +241,159 @@ exports.register = async (req, res) => {
     client.release();
   }
 };
+
+// Solicitar recuperação de senha (envio de e-mail com link/token via Brevo)
+exports.forgotPassword = async (req, res) => {
+  const { emailOrUsername } = req.body;
+
+  if (!emailOrUsername || !emailOrUsername.trim()) {
+    return res.status(400).json({ error: 'Informe seu e-mail ou nome de usuário.' });
+  }
+
+  const queryIdentifier = emailOrUsername.trim().toLowerCase();
+
+  // Buscar usuário por e-mail ou nome de usuário (insensível a maiúsculas)
+  db.get(
+    `SELECT u.id, u.username, u.name, u.email 
+     FROM users u 
+     WHERE LOWER(TRIM(u.email)) = ? OR LOWER(TRIM(u.username)) = ?`,
+    [queryIdentifier, queryIdentifier],
+    async (err, user) => {
+      if (err) {
+        console.error('Erro ao buscar usuário para recuperação:', err);
+        return res.status(500).json({ error: 'Erro interno ao processar recuperação.' });
+      }
+
+      if (!user) {
+        return res.status(404).json({ error: 'Nenhuma conta encontrada com este e-mail ou usuário.' });
+      }
+
+      if (!user.email || !user.email.includes('@')) {
+        return res.status(400).json({ 
+          error: 'Esta conta não possui um e-mail válido cadastrado. Entre em contato com o administrador da sua empresa ou com o suporte.' 
+        });
+      }
+
+      try {
+        // Gerar token criptográfico único
+        const token = crypto.randomBytes(24).toString('hex');
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora de validade
+
+        // Inserir token no banco
+        db.run(
+          `INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)`,
+          [user.id, token, expiresAt],
+          async (insErr) => {
+            if (insErr) {
+              console.error('Erro ao salvar token de recuperação:', insErr);
+              return res.status(500).json({ error: 'Erro ao gerar token de recuperação.' });
+            }
+
+            // Montar link de recuperação
+            const baseUrl = process.env.APP_URL || (req.headers.origin || 'https://agroskan.com.br');
+            const resetLink = `${baseUrl}/?reset_token=${token}`;
+
+            try {
+              await emailService.sendPasswordResetEmail(user.email, user.name, resetLink, token);
+              
+              // Mascarar o e-mail para exibição segura (ex: j***o@gmail.com)
+              const [userPart, domainPart] = user.email.split('@');
+              const maskedUser = userPart.length > 2 
+                ? `${userPart[0]}***${userPart[userPart.length - 1]}` 
+                : `${userPart[0]}***`;
+              const maskedEmail = `${maskedUser}@${domainPart}`;
+
+              return res.json({ 
+                message: `Instruções de recuperação foram enviadas para o e-mail ${maskedEmail}. Verifique sua caixa de entrada e spam.` 
+              });
+            } catch (mailErr) {
+              console.error('Erro ao enviar e-mail via Brevo:', mailErr);
+              return res.status(500).json({ 
+                error: 'Falha ao enviar e-mail pelo serviço Brevo. Verifique as configurações de SMTP/API no servidor.' 
+              });
+            }
+          }
+        );
+      } catch (genErr) {
+        console.error('Erro geral ao gerar token:', genErr);
+        return res.status(500).json({ error: 'Erro ao processar solicitação.' });
+      }
+    }
+  );
+};
+
+// Redefinir senha com o token recebido
+exports.resetPassword = (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'Token de recuperação e nova senha são obrigatórios.' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'A nova senha deve ter no mínimo 6 caracteres.' });
+  }
+
+  const cleanToken = token.trim();
+
+  // Validar se o token existe, não foi usado e ainda não expirou
+  db.get(
+    `SELECT pr.*, u.id as user_id, u.username, u.name 
+     FROM password_resets pr
+     JOIN users u ON pr.user_id = u.id
+     WHERE pr.token = ? AND pr.used = FALSE AND pr.expires_at > CURRENT_TIMESTAMP`,
+    [cleanToken],
+    (err, resetRecord) => {
+      if (err) {
+        console.error('Erro ao validar token de redefinição:', err);
+        return res.status(500).json({ error: 'Erro interno ao validar solicitação.' });
+      }
+
+      if (!resetRecord) {
+        return res.status(400).json({ 
+          error: 'O link ou token de recuperação é inválido ou já expirou. Por favor, solicite uma nova recuperação.' 
+        });
+      }
+
+      // Hash da nova senha
+      const salt = bcrypt.genSaltSync(10);
+      const hashedPassword = bcrypt.hashSync(newPassword, salt);
+
+      // Atualizar a senha do usuário
+      db.run(
+        `UPDATE users SET password = ? WHERE id = ?`,
+        [hashedPassword, resetRecord.user_id],
+        (updErr) => {
+          if (updErr) {
+            console.error('Erro ao atualizar senha no banco:', updErr);
+            return res.status(500).json({ error: 'Erro ao atualizar a senha.' });
+          }
+
+          // Marcar o token como utilizado para não ser reutilizado
+          db.run(
+            `UPDATE password_resets SET used = TRUE WHERE id = ?`,
+            [resetRecord.id],
+            (markErr) => {
+              if (markErr) {
+                console.warn('Aviso: Erro ao marcar token como usado:', markErr);
+              }
+
+              // Limpar sessões do usuário
+              db.run(
+                `DELETE FROM user_sessions WHERE user_id = ?`,
+                [resetRecord.user_id],
+                () => {}
+              );
+
+              return res.json({ 
+                message: 'Sua senha foi redefinida com sucesso! Você já pode realizar login com sua nova senha.' 
+              });
+            }
+          );
+        }
+      );
+    }
+  );
+};
+
 

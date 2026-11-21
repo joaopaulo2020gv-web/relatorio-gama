@@ -28,6 +28,13 @@ services:
       PORT: 5000
       JWT_SECRET: ${JWT_SECRET:-@AgroskanSecretKey2026Drone!}
       NODE_ENV: production
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-smtp-relay.brevo.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-suporte@agroskan.com.br}
+      APP_URL: ${APP_URL:-https://agroskan.com.br}
     volumes:
       - uploads-data:/usr/src/app/uploads
     depends_on:

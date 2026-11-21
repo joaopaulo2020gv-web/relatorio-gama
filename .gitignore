@@ -43,3 +43,6 @@ Thumbs.db
 
 # Pacotes de deploy temporários
 deploy.tar.gz
+update.tar.gz
+deploy-vps-tar.ps1
+deploy-to-vps.ps1
